@@ -1,0 +1,48 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environments
+.env
+.venv
+env/
+venv/
+ENV/
+VENV/
+
+# Distribution / packaging
+.Python
+.ruff_cache/
+build/
+dist/
+develop-eggs/
+*.egg-info/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+pip-log.txt
+pip-download-cache/
+pip-ephem-wheels/
+.tox/
+.coverage
+.cache
+*.swp
+
+# PyInstaller distribution
+__pyinstaller/
+
+# Jupyter Notebook
+.ipynb_checkpoints
+
+# OS or Editor files
+.DS_Store
+Thumbs.db
+*.log
+*.tmp
+
+# VS Code
+.vscode/
