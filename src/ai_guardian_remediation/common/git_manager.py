@@ -1,0 +1,129 @@
+import git
+import shutil
+import os
+from urllib.parse import urlparse
+
+
+class GitRepoManager:
+    def __init__(self, repo_url, clone_path, branch=None, token=None):
+        self.repo_url = repo_url
+        self.clone_path = clone_path
+        self.token = token
+        self.branch = branch or self.get_default_branch()
+
+    def _get_authenticated_url(self):
+        if self.token:
+            # HTTPS with token authentication
+            parsed_url = urlparse(self.repo_url)
+            netloc = parsed_url.netloc
+            path = parsed_url.path.strip("/")
+            return f"https://{self.token}@{netloc}/{path}"
+        else:
+            raise ValueError("No authentication method provided (token required).")
+
+    def get_default_branch(self) -> str:
+        """Get the default branch of the remote repository."""
+        try:
+            authenticated_url = self._get_authenticated_url()
+            remote_refs = git.cmd.Git().ls_remote("--symref", authenticated_url, "HEAD")
+            for line in remote_refs.splitlines():
+                if line.startswith("ref:") and "HEAD" in line:
+                    return line.split()[1].split("/")[-1]
+            return None
+        except Exception as e:
+            print(f"Failed to get default branch: {e}")
+            return None
+
+    def clone_repo(self) -> bool:
+        is_cloned = False
+        if os.path.exists(self.clone_path):
+            print(
+                f"Repository already exists at {self.clone_path}. Cleaning it for a fresh clone operation."
+            )
+            self.cleanup_repo()
+
+        try:
+            authenticated_url = self._get_authenticated_url()
+            print(
+                f"Cloning repository from {self.repo_url}, branch {self.branch} to {self.clone_path}..."
+            )
+
+            if self.token:
+                # Get default branch if not specified
+                # branch_to_clone = self.branch or self.get_default_branch()
+
+                # Clone with single branch option
+                git.Repo.clone_from(
+                    authenticated_url,
+                    self.clone_path,
+                    branch=self.branch,
+                    single_branch=True,
+                    depth=1,  # Also limit history to latest commit
+                )
+
+            print(f"Repository successfully cloned to {self.clone_path}.")
+            is_cloned = True
+            # Remove token from remote URL after clone
+            try:
+                repo = git.Repo(self.clone_path)
+                repo.remotes.origin.set_url(self.repo_url)
+                print(f"Remote URL reset to {self.repo_url} (token removed).")
+            except Exception as e:
+                print(f"Failed to reset remote URL: {e}")
+            return is_cloned
+        except Exception as e:
+            print(f"Failed to clone repository: {e}")
+            return is_cloned
+
+    def cleanup_repo(self):
+        if os.path.exists(self.clone_path):
+            try:
+                print(f"Cleaning up the repository at {self.clone_path}...")
+                shutil.rmtree(self.clone_path)
+                print("Repository cleaned up successfully.")
+            except Exception as e:
+                print(f"Failed to clean up repository: {e}")
+        else:
+            print("No repository found to clean up.")
+
+    def calculate_branch_diff(self, branch_name):
+        try:
+            repo = git.Repo(self.clone_path)
+            if branch_name not in repo.heads:
+                raise ValueError(
+                    f"Branch '{branch_name}' does not exist in the repository."
+                )
+
+            branch = repo.heads[branch_name]
+            diff = repo.git.diff(branch.commit)
+            return diff
+        except Exception as e:
+            print(f"Failed to calculate diff for branch '{branch_name}': {e}")
+            return None
+
+    def get_current_branch(self):
+        try:
+            repo = git.Repo(self.clone_path)
+            return repo.active_branch.name
+        except TypeError:
+            print("Detached HEAD state: Not currently on any branch.")
+            return None
+        except Exception as e:
+            print(f"Failed to get the current branch: {e}")
+            return None
+
+    @staticmethod
+    def cleanup_all_repos(folder_path):
+        if os.path.exists(folder_path):
+            try:
+                print(f"Cleaning up all repositories in the folder: {folder_path}...")
+                for item in os.listdir(folder_path):
+                    item_path = os.path.join(folder_path, item)
+                    if os.path.isdir(item_path):
+                        shutil.rmtree(item_path)
+                        print(f"Cleaned up repository: {item_path}")
+                print("All repositories cleaned up successfully.")
+            except Exception as e:
+                print(f"Failed to clean up repositories in the folder: {e}")
+        else:
+            print(f"Folder {folder_path} does not exist.")

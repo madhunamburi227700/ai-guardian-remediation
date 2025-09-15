@@ -46,3 +46,6 @@ Thumbs.db
 
 # VS Code
 .vscode/
+
+#App specific
+clone-tmp/

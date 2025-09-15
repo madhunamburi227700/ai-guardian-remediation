@@ -5,7 +5,9 @@ from fastapi.responses import JSONResponse
 app = FastAPI()
 
 # Include your routers here
-# app.include_router()
+from src.ai_guardian_remediation.api import cve_remediation
+
+app.include_router(cve_remediation.router)
 
 
 @app.get("/healthz")
