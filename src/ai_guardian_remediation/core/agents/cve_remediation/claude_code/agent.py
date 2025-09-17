@@ -1,7 +1,8 @@
 from ai_guardian_remediation.core.agents.cve_remediation.base import CVERemediationAgent
+from ai_guardian_remediation.config import settings
 
 import os
-
+import logging
 
 from pathlib import Path
 from claude_code_sdk import (
@@ -54,7 +55,7 @@ class ClaudeCode(CVERemediationAgent):
                 cwd=Path(self.clone_path),
                 allowed_tools=["Read", "Write", "Bash", "WebSearch", "WebFetch"],
                 permission_mode="acceptEdits",  # auto-accept file edits
-                resume=session,
+                resume=session
             )
         ) as client:
             await client.query(message)
@@ -115,12 +116,11 @@ class ClaudeCode(CVERemediationAgent):
     async def _receive_response(self, client: ClaudeSDKClient):
         message_count = 0
         async for message in client.receive_response():
-            print(message)
-            print("-----------------\n")
+            logging.info(message)
             message_count += 1
 
             if isinstance(message, AssistantMessage):
-                print(
+                logging.info(
                     f"Processing AssistantMessage {message_count} with {len(message.content)} blocks"
                 )
                 for block in message.content:
@@ -129,7 +129,7 @@ class ClaudeCode(CVERemediationAgent):
                         yield data
 
             elif isinstance(message, SystemMessage):
-                print(
+                logging.info(
                     f"Processing SystemMessage {message_count} - Subtype: {message.subtype}"
                 )
                 data = {
@@ -140,7 +140,7 @@ class ClaudeCode(CVERemediationAgent):
                 yield data
 
             elif isinstance(message, ResultMessage):
-                print(
+                logging.info(
                     f"Query completed - Cost: ${message.total_cost_usd:.4f}, Duration: {message.duration_ms}ms, Turns: {message.num_turns}, Error: {message.is_error}"
                 )
                 data = {
@@ -153,4 +153,4 @@ class ClaudeCode(CVERemediationAgent):
                 }
                 yield data
 
-        print(f"Stream completed successfully - Processed {message_count} messages")
+        logging.info(f"Stream completed successfully - Processed {message_count} messages")

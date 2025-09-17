@@ -16,6 +16,8 @@ from ai_guardian_remediation.common.utils import (
     sanitize_github_url,
 )
 
+import logging
+
 
 class CVERemediationService:
     def __init__(
@@ -26,7 +28,7 @@ class CVERemediationService:
         remote_url: str,
         branch: str,
         user_email,
-    ):
+    ):  
         # TODO: Change this for other SCMs
         self.git_remote_url = sanitize_github_url(remote_url)
         self.cve_id = cve_id
@@ -104,12 +106,12 @@ class CVERemediationService:
                 yield format_stream_data(data)
 
         except Exception as e:
-            print(f"Error in streaming: {str(e)}")
+            logging.error(f"Error in streaming: {str(e)}")
             error_data = {"type": "error", "error": str(e)}
             yield format_stream_data(error_data)
         finally:
             # Send completion marker
-            print("Sending completion marker")
+            logging.info("Sending completion marker")
             yield format_stream_data({"type": "done"})
 
     async def apply_fix(
@@ -125,12 +127,12 @@ class CVERemediationService:
             yield format_stream_data(data)
 
         except Exception as e:
-            print(f"Error in streaming: {str(e)}")
+            logging.error(f"Error in streaming: {str(e)}")
             error_data = {"type": "error", "error": str(e)}
             yield format_stream_data(error_data)
         finally:
             # Send completion marker
-            print("Sending completion marker")
+            logging.info("Sending completion marker")
             yield format_stream_data({"type": "done"})
             # repo cleanup
             if self.git_manager:

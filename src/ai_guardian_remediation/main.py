@@ -2,6 +2,13 @@ from fastapi import FastAPI
 
 from fastapi.responses import JSONResponse
 
+import logging
+
+logging.basicConfig(
+    level=logging.INFO, 
+    format="%(asctime)s - %(levelname)s - %(message)s", 
+)
+
 app = FastAPI()
 
 # Include your routers here
