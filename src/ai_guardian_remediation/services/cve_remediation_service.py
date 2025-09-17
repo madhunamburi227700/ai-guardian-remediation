@@ -28,7 +28,7 @@ class CVERemediationService:
         remote_url: str,
         branch: str,
         user_email,
-    ):  
+    ):
         # TODO: Change this for other SCMs
         self.git_remote_url = sanitize_github_url(remote_url)
         self.cve_id = cve_id

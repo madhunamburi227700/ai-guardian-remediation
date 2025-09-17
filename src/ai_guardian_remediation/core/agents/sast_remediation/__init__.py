@@ -1,1 +1,2 @@
-
+DEFAULT_CLONE_TMP_DIRECTORY = "clone-tmp"
+DEFAULT_REMEDIATION_SUB_DIR = "sast-remediation"

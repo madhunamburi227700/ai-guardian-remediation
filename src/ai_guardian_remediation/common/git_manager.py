@@ -117,7 +117,9 @@ class GitRepoManager:
     def cleanup_all_repos(folder_path):
         if os.path.exists(folder_path):
             try:
-                logging.info(f"Cleaning up all repositories in the folder: {folder_path}...")
+                logging.info(
+                    f"Cleaning up all repositories in the folder: {folder_path}..."
+                )
                 for item in os.listdir(folder_path):
                     item_path = os.path.join(folder_path, item)
                     if os.path.isdir(item_path):

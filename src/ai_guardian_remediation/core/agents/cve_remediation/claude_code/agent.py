@@ -1,5 +1,4 @@
 from ai_guardian_remediation.core.agents.cve_remediation.base import CVERemediationAgent
-from ai_guardian_remediation.config import settings
 
 import os
 import logging
@@ -55,7 +54,7 @@ class ClaudeCode(CVERemediationAgent):
                 cwd=Path(self.clone_path),
                 allowed_tools=["Read", "Write", "Bash", "WebSearch", "WebFetch"],
                 permission_mode="acceptEdits",  # auto-accept file edits
-                resume=session
+                resume=session,
             )
         ) as client:
             await client.query(message)
@@ -153,4 +152,6 @@ class ClaudeCode(CVERemediationAgent):
                 }
                 yield data
 
-        logging.info(f"Stream completed successfully - Processed {message_count} messages")
+        logging.info(
+            f"Stream completed successfully - Processed {message_count} messages"
+        )

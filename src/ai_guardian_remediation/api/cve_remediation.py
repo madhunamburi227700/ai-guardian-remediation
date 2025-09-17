@@ -12,6 +12,7 @@ from enum import Enum
 from typing import Optional, Literal
 import logging
 
+
 class FixRequest(BaseModel):
     session_id: Optional[str] = None
     remote_url: str
@@ -42,7 +43,13 @@ async def fix(
     input: FixRequest,
     mode: Annotated[ModeFix, Query()],
 ):
-    logging.info("Received request to remediate CVE %s in package %s in repo at %s using mode %s", input.cve_id, input.package, input.remote_url, input.message_type)
+    logging.info(
+        "Received request to remediate CVE %s in package %s in repo at %s using mode %s",
+        input.cve_id,
+        input.package,
+        input.remote_url,
+        input.message_type,
+    )
 
     # TODO: We will get this from the DB
     token = os.getenv("GH_TOKEN")
@@ -69,7 +76,7 @@ async def fix(
             )
 
         case ModeFix.apply:
-            logging.info('Apply fix')
+            logging.info("Apply fix")
             return StreamingResponse(
                 remediation_service.apply_fix(
                     input.session_id,
