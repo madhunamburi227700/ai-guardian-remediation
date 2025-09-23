@@ -10,16 +10,13 @@ from ai_guardian_remediation.common.git_manager import GitRepoManager
 from ai_guardian_remediation.common.utils import (
     format_stream_data,
     get_clone_directory_name,
-    sanitize_github_url,
 )
 
 
 class SASTRemediationService:
     def __init__(
         self,
-        platform: str,
-        organization: str,
-        repository: str,
+        repository_url: str,
         branch: str,
         rule: str,
         rule_message: str,
@@ -27,12 +24,9 @@ class SASTRemediationService:
         line_no: int,
         git_token: str,  # token for GitRepoManager
     ):
-        if platform.lower() != "github":
-            raise ValueError("Only GitHub platform is supported")
-
-        self.git_remote_url = sanitize_github_url(
-            f"https://github.com/{organization}/{repository}"
-        )
+        # TODO: Verify that this url is github and is able to get the root url
+        # TODO: Some initial checks
+        self.git_remote_url = repository_url
         self.git_token = git_token
         self.clone_path = self._get_cloned_path(branch, rule, file_path, line_no)
 

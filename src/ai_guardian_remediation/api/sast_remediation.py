@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse, JSONResponse
 from typing import Annotated
-import os
 
 from ai_guardian_remediation.services.sast_remediation_service import (
     SASTRemediationService,
@@ -17,9 +16,9 @@ class ActionEnum(str, Enum):
 
 
 class SASTFixRequest(BaseModel):
-    platform: str
-    organization: str
-    repository: str
+    scan_result_id: str
+    repository_url: str
+    token: str
     branch: str
     rule: str
     rule_message: str
@@ -34,17 +33,14 @@ router = APIRouter(prefix="/sast-remediation", tags=["sast-remediation"])
 async def fix_sast_remediation(
     input: SASTFixRequest, action: Annotated[ActionEnum, Query()]
 ):
-    git_token = os.getenv("GH_TOKEN")
     service = SASTRemediationService(
-        platform=input.platform,
-        organization=input.organization,
-        repository=input.repository,
+        repository_url=input.repository_url,
         branch=input.branch,
         rule=input.rule,
         rule_message=input.rule_message,
         file_path=input.file_path,
         line_no=input.line_no,
-        git_token=git_token,
+        git_token=input.token,
     )
 
     match action:
