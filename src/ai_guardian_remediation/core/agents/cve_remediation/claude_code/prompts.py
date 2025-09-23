@@ -45,3 +45,6 @@ Only follow the instructions below related to the PR process:
 You **must** use the **mcp__github** tools for all Git and PR-related actions.  
 **Do not use any other tool or method** to create the pull request. This is a strict requirement.
 """
+
+PULL_REQUEST_PROMPT = """ Created remediation for CVE with ID {cve_id} affecting package {package}
+"""

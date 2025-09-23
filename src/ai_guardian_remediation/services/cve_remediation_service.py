@@ -8,6 +8,7 @@ from ai_guardian_remediation.config import settings
 
 from ai_guardian_remediation.core.agents.cve_remediation.factory import get_cve_agent
 from ai_guardian_remediation.common.git_manager import GitRepoManager
+from ai_guardian_remediation.common.providers.github_provider import GithubProvider
 
 
 from ai_guardian_remediation.common.utils import (
@@ -30,6 +31,7 @@ class CVERemediationService:
         user_email,
     ):
         # TODO: Change this for other SCMs
+        self.remote_url = remote_url
         self.git_remote_url = sanitize_github_url(remote_url)
         self.cve_id = cve_id
         self.package = package
@@ -117,23 +119,24 @@ class CVERemediationService:
     async def apply_fix(
         self, session_id: str = None, message_type: str = None, user_message=None
     ):
-        try:
-            # Run the agent
-            async for data in self.agent.apply_fix(
-                session_id, self.cve_id, self.package, message_type, user_message
-            ):
-                yield format_stream_data(data)
+        self.git_manager.commit_to_branch(
+            self.branch, 
+            self.cve_id, 
+            self.package
+        )
 
-            yield format_stream_data(data)
+        github_repo = GithubProvider(
+            git_manager=self.git_manager,
+            repo_url=self.remote_url,
+            clone_path=self.clone_path,
+            token=self.git_token,
+            branch=self.branch
+        )
 
-        except Exception as e:
-            logging.error(f"Error in streaming: {str(e)}")
-            error_data = {"type": "error", "error": str(e)}
-            yield format_stream_data(error_data)
-        finally:
-            # Send completion marker
-            logging.info("Sending completion marker")
-            yield format_stream_data({"type": "done"})
-            # repo cleanup
-            if self.git_manager:
-                self.git_manager.cleanup_repo()
+        github_repo.create_pull_request(
+            main_branch_name=self.branch,
+            cve_id=self.cve_id,
+            package=self.package
+        )
+        
+        yield format_stream_data({"type": "done"})

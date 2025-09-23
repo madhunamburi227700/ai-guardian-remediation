@@ -3,7 +3,9 @@ import shutil
 import os
 from urllib.parse import urlparse
 import logging
-
+import uuid
+import random
+import string
 
 class GitRepoManager:
     def __init__(self, repo_url, clone_path, branch=None, token=None):
@@ -11,6 +13,7 @@ class GitRepoManager:
         self.clone_path = clone_path
         self.token = token
         self.branch = branch or self.get_default_branch()
+        self.fix_branch = None
 
     def _get_authenticated_url(self):
         if self.token:
@@ -112,6 +115,30 @@ class GitRepoManager:
         except Exception as e:
             logging.error(f"Failed to get the current branch: {e}")
             return None
+        
+    @staticmethod
+    def create_branch_name(cve_id, package):
+        characters = string.ascii_letters + string.digits
+        random_string =  ''.join(random.choice(characters) for _ in range(10))
+        branch_name = 'fix/' + cve_id + '_' + package + '_' + random_string
+        return branch_name
+           
+    def commit_to_branch(self, main_branch_name, cve_id, package):
+        try:
+            random_uuid = str(uuid.uuid4())
+            self.fix_branch = GitRepoManager.create_branch_name(cve_id, package)
+
+            repo = git.Repo(self.clone_path)
+            repo.git.checkout("HEAD", b=self.fix_branch)
+
+            repo.git.add(A=True)
+            repo.index.commit(f"Remediation for {cve_id}")
+
+            origin = repo.remote(name='origin')
+            origin.push(refspec=f"{self.fix_branch}:{self.fix_branch}")
+            logging.info(f'Pushed changes to new branch {self.fix_branch}')
+        except Exception as e:
+            logging.error(f'Could not changes to new branch: {e}')
 
     @staticmethod
     def cleanup_all_repos(folder_path):

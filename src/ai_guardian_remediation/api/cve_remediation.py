@@ -53,7 +53,6 @@ async def fix(
 
     # TODO: We will get this from the DB
     token = os.getenv("GH_TOKEN")
-    # token = os.environ["GH_TOKEN"]
 
     remediation_service = CVERemediationService(
         cve_id=input.cve_id,
@@ -76,7 +75,6 @@ async def fix(
             )
 
         case ModeFix.apply:
-            logging.info("Apply fix")
             return StreamingResponse(
                 remediation_service.apply_fix(
                     input.session_id,
