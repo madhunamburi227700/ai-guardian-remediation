@@ -2,6 +2,8 @@ from urllib.parse import urlparse
 import json
 import re
 import hashlib
+import random
+import string
 
 
 def get_clone_directory_name(repo_url: str, *args):
@@ -52,3 +54,28 @@ def sanitize_github_url(url: str) -> str | None:
         return url + ".git"
 
     return url
+
+
+def detect_provider(remote_url):
+    url = remote_url.lower()
+
+    if "github.com" in url:
+        return "github"
+    else:
+        return "unknown"
+
+
+# CVE utils
+def create_branch_name_for_cve_remediation(cve_id, package):
+    characters = string.ascii_letters + string.digits
+    random_string = "".join(random.choice(characters) for _ in range(10))
+    branch_name = f"fix/{cve_id}-{package}-{random_string}"
+    return branch_name
+
+
+# SAST utils
+def create_branch_name_for_sast_remediation(rule_id, line_no):
+    characters = string.ascii_letters + string.digits
+    random_string = "".join(random.choice(characters) for _ in range(10))
+    branch_name = f"fix/{rule_id}-{line_no}-{random_string}"
+    return branch_name

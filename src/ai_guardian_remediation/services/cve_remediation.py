@@ -1,5 +1,6 @@
 import os
 
+from ai_guardian_remediation.common.scm_providers.base import get_git_provider
 from ai_guardian_remediation.core.agents.cve_remediation import (
     DEFAULT_CLONE_TMP_DIRECTORY,
     DEFAULT_REMEDIATION_SUB_DIR,
@@ -8,16 +9,26 @@ from ai_guardian_remediation.config import settings
 
 from ai_guardian_remediation.core.agents.cve_remediation.factory import get_cve_agent
 from ai_guardian_remediation.common.git_manager import GitRepoManager
-from ai_guardian_remediation.common.providers.github_provider import GithubProvider
-
 
 from ai_guardian_remediation.common.utils import (
+    detect_provider,
     format_stream_data,
     get_clone_directory_name,
     sanitize_github_url,
+    create_branch_name_for_cve_remediation,
 )
 
 import logging
+
+from ai_guardian_remediation.services.db import save_remediation
+from ai_guardian_remediation.storage.db.db import session
+
+
+pr_template = """### Pull Request — CVE Fix
+
+- CVE ID: {cve_id}
+- Package: {package}
+"""
 
 
 class CVERemediationService:
@@ -28,17 +39,20 @@ class CVERemediationService:
         git_token: str,
         remote_url: str,
         branch: str,
-        user_email,
+        scan_result_id: str,
     ):
         # TODO: Change this for other SCMs
-        self.remote_url = remote_url
         self.git_remote_url = sanitize_github_url(remote_url)
         self.cve_id = cve_id
         self.package = package
+        self.scan_result_id = scan_result_id
 
         # Change this
         self.git_token = git_token
-        self.clone_path = self._get_cloned_path(user_email, branch, cve_id)
+        self.clone_path = self._get_cloned_path(scan_result_id, branch, cve_id)
+        self.provider = detect_provider(self.git_remote_url)
+        self.db_session = session
+
         self.git_manager = GitRepoManager(
             repo_url=remote_url,
             branch=branch,
@@ -54,9 +68,9 @@ class CVERemediationService:
             scm_secret=self.git_token,
         )
 
-    def _get_cloned_path(self, user_email, branch, cve_id):
+    def _get_cloned_path(self, scan_result_id, branch, cve_id):
         clone_dir = get_clone_directory_name(
-            self.git_remote_url, branch, cve_id, user_email
+            self.git_remote_url, branch, cve_id, scan_result_id
         )
 
         return os.path.join(
@@ -88,6 +102,13 @@ class CVERemediationService:
                 }
                 yield format_stream_data(data)
 
+                await save_remediation(
+                    self.db_session,
+                    self.scan_result_id,
+                    "started",
+                    {"scan_result_id": self.scan_result_id, "pr_link": ""},
+                )
+
             if not os.path.exists(self.clone_path):
                 raise Exception(
                     f"The cloned directory could not be found for repository {self.git_remote_url}"
@@ -106,6 +127,9 @@ class CVERemediationService:
                     "content": diff,
                 }
                 yield format_stream_data(data)
+                await save_remediation(
+                    self.db_session, self.scan_result_id, "fix_generated"
+                )
 
         except Exception as e:
             logging.error(f"Error in streaming: {str(e)}")
@@ -116,27 +140,42 @@ class CVERemediationService:
             logging.info("Sending completion marker")
             yield format_stream_data({"type": "done"})
 
-    async def apply_fix(
-        self, session_id: str = None, message_type: str = None, user_message=None
-    ):
-        self.git_manager.commit_to_branch(
-            self.branch, 
-            self.cve_id, 
-            self.package
-        )
+    async def apply_fix(self):
+        try:
+            fix_branch = create_branch_name_for_cve_remediation(
+                self.cve_id, self.package
+            )
+            self.git_manager.commit_to_branch(
+                fix_branch, f"fix: {self.cve_id}-{self.package}"
+            )
 
-        github_repo = GithubProvider(
-            git_manager=self.git_manager,
-            repo_url=self.remote_url,
-            clone_path=self.clone_path,
-            token=self.git_token,
-            branch=self.branch
-        )
+            scm_provider = get_git_provider(
+                provider_type=self.provider,
+                repo_url=self.git_remote_url,
+                clone_path=self.clone_path,
+                token=self.git_token,
+            )
 
-        github_repo.create_pull_request(
-            main_branch_name=self.branch,
-            cve_id=self.cve_id,
-            package=self.package
-        )
-        
-        yield format_stream_data({"type": "done"})
+            pr_link = scm_provider.create_pull_request(
+                base_branch=self.branch,
+                to_branch=fix_branch,
+                title=f"fix: cve-{self.cve_id}-{self.package}",
+                body=pr_template.format(cve_id=self.cve_id, package=self.package),
+            )
+            yield format_stream_data(
+                {
+                    "type": "debug",
+                    "data": f"PR {pr_link} has been created.",
+                }
+            )
+
+            await save_remediation(
+                self.db_session, self.scan_result_id, "pr_raised", {"pr_link": pr_link}
+            )
+            yield format_stream_data({"type": "done"})
+        except Exception as e:
+            yield format_stream_data({"type": "error", "error": str(e)})
+        finally:
+            yield format_stream_data({"type": "done"})
+            if self.git_manager:
+                self.git_manager.cleanup_repo()

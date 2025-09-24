@@ -2,7 +2,7 @@ from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse, JSONResponse
 from typing import Annotated
 
-from ai_guardian_remediation.services.sast_remediation_service import (
+from ai_guardian_remediation.services.sast_remediation import (
     SASTRemediationService,
 )
 from pydantic import BaseModel
@@ -41,6 +41,7 @@ async def fix_sast_remediation(
         file_path=input.file_path,
         line_no=input.line_no,
         git_token=input.token,
+        scan_result_id=input.scan_result_id,
     )
 
     match action:

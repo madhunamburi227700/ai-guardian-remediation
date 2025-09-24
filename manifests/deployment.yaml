@@ -1,0 +1,34 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ai-guardian-remediation
+  labels:
+    component: ai-guardian-remediation
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      component: ai-guardian-remediation
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        component: ai-guardian-remediation
+    spec:
+      containers:
+      - name: ai-guardian-remediation
+        image: shraddhazpy/rem-app:v0.0.1
+        resources: {}
+        envFrom:
+        - secretRef:
+            name: ai-guardian-remediation-secret
+        securityContext:
+          readOnlyRootFilesystem: true
+          runAsNonRoot: true
+          allowPrivilegeEscalation: false
+      restartPolicy: Always
+      terminationGracePeriodSeconds: 30
+      securityContext:
+        runAsNonRoot: true
+        allowPrivilegeEscalation: false

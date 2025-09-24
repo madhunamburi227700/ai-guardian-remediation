@@ -1,9 +1,8 @@
 from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
 from typing import Annotated
-import os
 
-from ai_guardian_remediation.services.cve_remediation_service import (
+from ai_guardian_remediation.services.cve_remediation import (
     CVERemediationService,
 )
 
@@ -15,13 +14,14 @@ import logging
 
 class FixRequest(BaseModel):
     session_id: Optional[str] = None
+    scan_result_id: str
+    token: str
     remote_url: str
     cve_id: str
     package: str
     branch: Optional[str] = None
     message_type: Literal["start_generate", "start_apply", "followup"]
     user_message: Optional[str] = None
-    user_email: Optional[str] = None
 
     @field_validator("session_id")
     def empty_string_to_none(cls, v):
@@ -51,16 +51,13 @@ async def fix(
         input.message_type,
     )
 
-    # TODO: We will get this from the DB
-    token = os.getenv("GH_TOKEN")
-
     remediation_service = CVERemediationService(
         cve_id=input.cve_id,
         package=input.package,
-        git_token=token,
+        git_token=input.token,
         remote_url=input.remote_url,
         branch=input.branch,
-        user_email=input.user_email,
+        scan_result_id=input.scan_result_id,
     )
 
     match mode:

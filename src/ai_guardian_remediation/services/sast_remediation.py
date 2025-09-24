@@ -1,4 +1,6 @@
 import os
+
+
 from ai_guardian_remediation.core.agents.sast_remediation import (
     DEFAULT_CLONE_TMP_DIRECTORY,
     DEFAULT_REMEDIATION_SUB_DIR,
@@ -10,7 +12,21 @@ from ai_guardian_remediation.common.git_manager import GitRepoManager
 from ai_guardian_remediation.common.utils import (
     format_stream_data,
     get_clone_directory_name,
+    create_branch_name_for_sast_remediation,
+    detect_provider,
 )
+from ai_guardian_remediation.common.scm_providers.base import get_git_provider
+from ai_guardian_remediation.services.db import save_remediation
+from ai_guardian_remediation.storage.db.db import session
+
+
+pr_template = """### Pull Request — Semgrep Rule Fix
+
+- Rule ID: {rule}
+- Rule Message: {rule_message}
+- File Path: {file_path}
+- Line: {line_no}
+"""
 
 
 class SASTRemediationService:
@@ -23,12 +39,23 @@ class SASTRemediationService:
         file_path: str,
         line_no: int,
         git_token: str,  # token for GitRepoManager
+        scan_result_id: str,
     ):
         # TODO: Verify that this url is github and is able to get the root url
         # TODO: Some initial checks
         self.git_remote_url = repository_url
+        self.branch = branch
         self.git_token = git_token
-        self.clone_path = self._get_cloned_path(branch, rule, file_path, line_no)
+        self.clone_path = self._get_cloned_path(
+            branch, rule, file_path, line_no, scan_result_id
+        )
+        self.file_path = file_path
+        self.rule = rule
+        self.rule_message = rule_message
+        self.line_no = line_no
+        self.scan_result_id = scan_result_id
+        self.provider = detect_provider(repository_url)
+        self.db_session = session
 
         # Git operations
         self.git_manager = GitRepoManager(
@@ -50,9 +77,9 @@ class SASTRemediationService:
             scm_secret=self.git_token,  # SCM token for GitHub operations
         )
 
-    def _get_cloned_path(self, branch, rule, file_path, line_no):
+    def _get_cloned_path(self, branch, rule, file_path, line_no, scan_result_id):
         clone_dir = get_clone_directory_name(
-            self.git_remote_url, branch, rule, file_path, str(line_no)
+            self.git_remote_url, branch, rule, file_path, str(line_no), scan_result_id
         )
         return os.path.join(
             DEFAULT_CLONE_TMP_DIRECTORY, DEFAULT_REMEDIATION_SUB_DIR, clone_dir
@@ -83,6 +110,13 @@ class SASTRemediationService:
                 }
             )
 
+            await save_remediation(
+                self.db_session,
+                self.scan_result_id,
+                "started",
+                {"scan_result_id": self.scan_result_id, "pr_link": ""},
+            )
+
             async for data in self.agent.generate_fix():
                 yield format_stream_data(data)
 
@@ -91,6 +125,10 @@ class SASTRemediationService:
             )
             yield format_stream_data({"type": "diff", "content": diff})
 
+            await save_remediation(
+                self.db_session, self.scan_result_id, "fix_generated"
+            )
+
         except Exception as e:
             yield format_stream_data({"type": "error", "error": str(e)})
         finally:
@@ -98,8 +136,41 @@ class SASTRemediationService:
 
     async def process_approval(self):
         try:
-            async for data in self.agent.process_approval():
-                yield format_stream_data(data)
+            fix_branch = create_branch_name_for_sast_remediation(
+                self.rule, self.line_no
+            )
+            self.git_manager.commit_to_branch(
+                fix_branch, f"fix: {self.rule}-{self.line_no}"
+            )
+
+            scm_provider = get_git_provider(
+                provider_type=self.provider,
+                repo_url=self.git_remote_url,
+                clone_path=self.clone_path,
+                token=self.git_token,
+            )
+
+            pr_link = scm_provider.create_pull_request(
+                base_branch=self.branch,
+                to_branch=fix_branch,
+                title=f"fix: semgrep-{self.rule}",
+                body=pr_template.format(
+                    file_path=self.file_path,
+                    rule=self.rule,
+                    rule_message=self.rule_message,
+                    line_no=self.line_no,
+                ),
+            )
+            yield format_stream_data(
+                {
+                    "type": "debug",
+                    "data": f"PR {pr_link} has been created.",
+                }
+            )
+            await save_remediation(
+                self.db_session, self.scan_result_id, "pr_raised", {"pr_link": pr_link}
+            )
+            yield format_stream_data({"type": "done"})
         except Exception as e:
             yield format_stream_data({"type": "error", "error": str(e)})
         finally:

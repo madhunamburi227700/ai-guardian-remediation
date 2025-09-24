@@ -6,6 +6,6 @@ class SASTRemediationAgent(ABC):
     async def generate_fix(self, **kwargs):
         raise NotImplementedError()
 
-    @abstractmethod
+    # @abstractmethod
     async def process_approval(self, **kwargs):
         raise NotImplementedError()
