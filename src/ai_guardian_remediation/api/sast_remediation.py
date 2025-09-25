@@ -17,7 +17,9 @@ class ActionEnum(str, Enum):
 
 class SASTFixRequest(BaseModel):
     scan_result_id: str
-    repository_url: str
+    platform: str
+    organization: str
+    repository: str
     token: str
     branch: str
     rule: str
@@ -34,7 +36,9 @@ async def fix_sast_remediation(
     input: SASTFixRequest, action: Annotated[ActionEnum, Query()]
 ):
     service = SASTRemediationService(
-        repository_url=input.repository_url,
+        platform=input.platform,
+        organization=input.organization,
+        repository=input.repository,
         branch=input.branch,
         rule=input.rule,
         rule_message=input.rule_message,

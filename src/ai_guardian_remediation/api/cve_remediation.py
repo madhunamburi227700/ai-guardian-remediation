@@ -16,7 +16,9 @@ class FixRequest(BaseModel):
     session_id: Optional[str] = None
     scan_result_id: str
     token: str
-    remote_url: str
+    platform: str
+    organization: str
+    repository: str
     cve_id: str
     package: str
     branch: Optional[str] = None
@@ -55,7 +57,9 @@ async def fix(
         cve_id=input.cve_id,
         package=input.package,
         git_token=input.token,
-        remote_url=input.remote_url,
+        platform=input.platform,
+        organization=input.organization,
+        repository=input.repository,
         branch=input.branch,
         scan_result_id=input.scan_result_id,
     )

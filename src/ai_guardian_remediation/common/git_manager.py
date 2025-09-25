@@ -111,7 +111,6 @@ class GitRepoManager:
             return None
 
     def commit_to_branch(self, branch: str, commit_message: str):
-        print(self.clone_path)
         repo = git.Repo(self.clone_path)
         repo.git.checkout("HEAD", b=branch)
 

@@ -21,11 +21,6 @@ class GithubProvider(SCMProvider):
 
     def create_pull_request(self, base_branch, to_branch, title, body) -> str:
         try:
-            print("cReating PR")
-            print(self.token)
-            print(self.repo_url)
-            print(self.clone_path)
-
             gh_token = Github(self.token)
             owner_repo = GithubProvider.extract_owner_repo(self.repo_url)
             gh_repo = gh_token.get_repo(owner_repo)

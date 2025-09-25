@@ -14,7 +14,7 @@ from ai_guardian_remediation.common.utils import (
     detect_provider,
     format_stream_data,
     get_clone_directory_name,
-    sanitize_github_url,
+    generate_repo_url,
     create_branch_name_for_cve_remediation,
 )
 
@@ -37,12 +37,14 @@ class CVERemediationService:
         cve_id: str,
         package: str,
         git_token: str,
-        remote_url: str,
+        platform: str,
+        organization: str,
+        repository: str,
         branch: str,
         scan_result_id: str,
     ):
         # TODO: Change this for other SCMs
-        self.git_remote_url = sanitize_github_url(remote_url)
+        self.git_remote_url = generate_repo_url(platform, organization, repository)
         self.cve_id = cve_id
         self.package = package
         self.scan_result_id = scan_result_id
@@ -54,7 +56,7 @@ class CVERemediationService:
         self.db_session = session
 
         self.git_manager = GitRepoManager(
-            repo_url=remote_url,
+            repo_url=self.git_remote_url,
             branch=branch,
             clone_path=self.clone_path,
             token=git_token,
@@ -172,7 +174,6 @@ class CVERemediationService:
             await save_remediation(
                 self.db_session, self.scan_result_id, "pr_raised", {"pr_link": pr_link}
             )
-            yield format_stream_data({"type": "done"})
         except Exception as e:
             yield format_stream_data({"type": "error", "error": str(e)})
         finally:

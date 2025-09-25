@@ -13,7 +13,7 @@ from ai_guardian_remediation.common.utils import (
     format_stream_data,
     get_clone_directory_name,
     create_branch_name_for_sast_remediation,
-    detect_provider,
+    generate_repo_url,
 )
 from ai_guardian_remediation.common.scm_providers.base import get_git_provider
 from ai_guardian_remediation.services.db import save_remediation
@@ -32,7 +32,9 @@ pr_template = """### Pull Request — Semgrep Rule Fix
 class SASTRemediationService:
     def __init__(
         self,
-        repository_url: str,
+        platform: str,
+        organization: str,
+        repository: str,
         branch: str,
         rule: str,
         rule_message: str,
@@ -43,7 +45,7 @@ class SASTRemediationService:
     ):
         # TODO: Verify that this url is github and is able to get the root url
         # TODO: Some initial checks
-        self.git_remote_url = repository_url
+        self.git_remote_url = generate_repo_url(platform, organization, repository)
         self.branch = branch
         self.git_token = git_token
         self.clone_path = self._get_cloned_path(
@@ -54,7 +56,7 @@ class SASTRemediationService:
         self.rule_message = rule_message
         self.line_no = line_no
         self.scan_result_id = scan_result_id
-        self.provider = detect_provider(repository_url)
+        self.provider = platform.lower()
         self.db_session = session
 
         # Git operations
@@ -136,6 +138,12 @@ class SASTRemediationService:
 
     async def process_approval(self):
         try:
+            yield format_stream_data(
+                {
+                    "type": "debug",
+                    "data": f"Starting the process of creating a PR",
+                }
+            )
             fix_branch = create_branch_name_for_sast_remediation(
                 self.rule, self.line_no
             )
@@ -170,7 +178,6 @@ class SASTRemediationService:
             await save_remediation(
                 self.db_session, self.scan_result_id, "pr_raised", {"pr_link": pr_link}
             )
-            yield format_stream_data({"type": "done"})
         except Exception as e:
             yield format_stream_data({"type": "error", "error": str(e)})
         finally:

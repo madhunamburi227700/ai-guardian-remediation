@@ -65,6 +65,16 @@ def detect_provider(remote_url):
         return "unknown"
 
 
+def generate_repo_url(platform: str, organization: str, repository: str) -> str:
+    # Check if the platform is GitHub
+    if platform.lower() != "github":
+        raise ValueError("The platform must be GitHub.")
+
+    # Construct the GitHub repository URL
+    repo_url = f"https://github.com/{organization}/{repository}"
+    return repo_url
+
+
 # CVE utils
 def create_branch_name_for_cve_remediation(cve_id, package):
     characters = string.ascii_letters + string.digits
