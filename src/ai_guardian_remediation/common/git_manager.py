@@ -110,7 +110,13 @@ class GitRepoManager:
             logging.error(f"Failed to get the current branch: {e}")
             return None
 
+    # TODO: The pushing business should be moved to the other class that handles PR creation
     def commit_to_branch(self, branch: str, commit_message: str):
+        if not os.path.exists(self.clone_path):
+            msg = f"Cloned repository directory does not exist (may have been deleted): {self.clone_path}"
+            logging.error(msg)
+            raise FileNotFoundError(msg)
+
         repo = git.Repo(self.clone_path)
         repo.git.checkout("HEAD", b=branch)
 
@@ -121,13 +127,32 @@ class GitRepoManager:
         original_url = origin.url
 
         # Only for Github for now
+        # if original_url.startswith("https://"):
+        #     authed_url = original_url.replace("https://", f"https://{self.token}@")
+        #     origin.set_url(authed_url)
+        # else:
+        #     raise ValueError("Unsupported remote URL. Must be HTTPS.")
         if original_url.startswith("https://"):
-            authed_url = original_url.replace("https://", f"https://{self.token}@")
+            if self.token.startswith("ghs_"):
+                authed_url = original_url.replace(
+                    "https://", f"https://x-access-token:{self.token}@"
+                )
+            else:
+                authed_url = original_url.replace("https://", f"https://{self.token}@")
             origin.set_url(authed_url)
         else:
             raise ValueError("Unsupported remote URL. Must be HTTPS.")
 
-        origin.push(refspec=f"{branch}:{branch}")
+        try:
+            push_result = origin.push(refspec=f"{branch}:{branch}")
+            for info in push_result:
+                if info.flags & info.ERROR:
+                    logging.error(info.summary)
+                    raise RuntimeError(info.summary)
+        except Exception as e:
+            logging.error(f"Failed to push changes to branch '{branch}': {e}")
+            raise RuntimeError(f"Push to branch '{branch}' failed : {e}")
+
         origin.set_url(original_url)
         logging.info(f"Pushed changes to new branch {branch}")
 

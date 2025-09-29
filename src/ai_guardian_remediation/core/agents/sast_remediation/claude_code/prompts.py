@@ -22,11 +22,11 @@ Your fix must be driven by the rule message. Strict adherence is required when r
 """
 
 
-PROCESS_APPROVAL_PROMPT = """A fix has been applied for the Semgrep rule {rule_message}, which was detected in the codebase at file {file_path} on or near line {line_number}.
+# PROCESS_APPROVAL_PROMPT = """A fix has been applied for the Semgrep rule {rule_message}, which was detected in the codebase at file {file_path} on or near line {line_number}.
 
-YOUR TASK:
-- **Do not modify any code.** Only perform the steps related to the PR process as outlined below:
-- Create a new Git branch reflecting the nature of the fix, and append a random alphanumeric suffix to the branch name to ensure uniqueness (e.g., fix/<brief-line-about-what-the-semgrep-rule-is-about>-123abc).
-- Commit the fix to this branch with a clear, concise commit message referencing the Semgrep rule.
-- Open a pull request to {repo_url} from the newly created branch, targeting the {branch} branch
-"""
+# YOUR TASK:
+# - **Do not modify any code.** Only perform the steps related to the PR process as outlined below:
+# - Create a new Git branch reflecting the nature of the fix, and append a random alphanumeric suffix to the branch name to ensure uniqueness (e.g., fix/<brief-line-about-what-the-semgrep-rule-is-about>-123abc).
+# - Commit the fix to this branch with a clear, concise commit message referencing the Semgrep rule.
+# - Open a pull request to {repo_url} from the newly created branch, targeting the {branch} branch
+# """

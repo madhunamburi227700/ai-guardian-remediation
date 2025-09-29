@@ -1,5 +1,5 @@
 import os
-
+import logging
 
 from ai_guardian_remediation.core.agents.sast_remediation import (
     DEFAULT_CLONE_TMP_DIRECTORY,
@@ -10,14 +10,13 @@ from ai_guardian_remediation.config import settings
 from ai_guardian_remediation.core.agents.sast_remediation.factory import get_sast_agent
 from ai_guardian_remediation.common.git_manager import GitRepoManager
 from ai_guardian_remediation.common.utils import (
-    format_stream_data,
+    format_message,
+    prepare_message,
     get_clone_directory_name,
     create_branch_name_for_sast_remediation,
     generate_repo_url,
 )
 from ai_guardian_remediation.common.scm_providers.base import get_git_provider
-from ai_guardian_remediation.services.db import save_remediation
-from ai_guardian_remediation.storage.db.db import session
 
 
 pr_template = """### Pull Request — Semgrep Rule Fix
@@ -57,7 +56,7 @@ class SASTRemediationService:
         self.line_no = line_no
         self.scan_result_id = scan_result_id
         self.provider = platform.lower()
-        self.db_session = session
+        # self.db_session = session
 
         # Git operations
         self.git_manager = GitRepoManager(
@@ -76,7 +75,7 @@ class SASTRemediationService:
             file_path=file_path,
             line_number=line_no,
             rule_message=rule_message,
-            scm_secret=self.git_token,  # SCM token for GitHub operations
+            scm_secret=self.git_token,
         )
 
     def _get_cloned_path(self, branch, rule, file_path, line_no, scan_result_id):
@@ -89,14 +88,10 @@ class SASTRemediationService:
 
     async def generate_fix(self):
         try:
-            if not self.git_token:
-                raise Exception("Github token is not set")
-
-            yield format_stream_data(
-                {
-                    "type": "debug",
-                    "data": f"The repo {self.git_remote_url} is about to be cloned",
-                }
+            yield format_message(
+                prepare_message(
+                    "debug", f"The repo {self.git_remote_url} is about to be cloned"
+                )
             )
 
             is_cloned = self.git_manager.clone_repo()
@@ -105,44 +100,31 @@ class SASTRemediationService:
                     "The repository could not be cloned, check repository URL or access rights"
                 )
 
-            yield format_stream_data(
-                {
-                    "type": "debug",
-                    "data": f"The repo {self.git_remote_url} has been cloned",
-                }
-            )
-
-            await save_remediation(
-                self.db_session,
-                self.scan_result_id,
-                "started",
-                {"scan_result_id": self.scan_result_id, "pr_link": ""},
+            yield format_message(
+                prepare_message(
+                    "debug", f"The repo {self.git_remote_url} has been cloned"
+                )
             )
 
             async for data in self.agent.generate_fix():
-                yield format_stream_data(data)
+                yield format_message(data)
 
             diff: str = self.git_manager.calculate_branch_diff(
                 self.git_manager.get_current_branch()
             )
-            yield format_stream_data({"type": "diff", "content": diff})
-
-            await save_remediation(
-                self.db_session, self.scan_result_id, "fix_generated"
-            )
+            if diff:
+                yield format_message(prepare_message("diff", diff))
 
         except Exception as e:
-            yield format_stream_data({"type": "error", "error": str(e)})
+            logging.error(f"Error in streaming: {str(e)}")
+            yield format_message(prepare_message("error", str(e)))
         finally:
-            yield format_stream_data({"type": "done"})
+            yield format_message(prepare_message("done"))
 
     async def process_approval(self):
         try:
-            yield format_stream_data(
-                {
-                    "type": "debug",
-                    "data": f"Starting the process of creating a PR",
-                }
+            yield format_message(
+                prepare_message("debug", "Starting the process of creating a PR")
             )
             fix_branch = create_branch_name_for_sast_remediation(
                 self.rule, self.line_no
@@ -169,19 +151,13 @@ class SASTRemediationService:
                     line_no=self.line_no,
                 ),
             )
-            yield format_stream_data(
-                {
-                    "type": "debug",
-                    "data": f"PR {pr_link} has been created.",
-                }
-            )
-            await save_remediation(
-                self.db_session, self.scan_result_id, "pr_raised", {"pr_link": pr_link}
+            yield format_message(
+                prepare_message("debug", f"PR {pr_link} has been created.")
             )
         except Exception as e:
-            yield format_stream_data({"type": "error", "error": str(e)})
+            yield format_message(prepare_message("error", str(e)))
         finally:
-            yield format_stream_data({"type": "done"})
+            yield format_message(prepare_message("done"))
             if self.git_manager:
                 self.git_manager.cleanup_repo()
 

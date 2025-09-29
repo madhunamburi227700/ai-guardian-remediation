@@ -29,7 +29,29 @@ def calculate_sha256_of_string(input_string: str) -> str:
     return sha256_hash.hexdigest()
 
 
-def format_stream_data(data) -> str:
+def prepare_message(message_type: str, text: str = None) -> str:
+    match message_type:
+        case "error":
+            data = {
+                "type": message_type,
+                "error": text,
+            }
+        case "diff":
+            data = {
+                "type": message_type,
+                "content": text,
+            }
+        case "done":
+            data = {"type": "done"}
+        case _:
+            data = {
+                "type": message_type,
+                "data": text,
+            }
+    return data
+
+
+def format_message(data) -> str:
     return f"data: {json.dumps(data)}\n\n"
 
 
@@ -79,6 +101,8 @@ def generate_repo_url(platform: str, organization: str, repository: str) -> str:
 def create_branch_name_for_cve_remediation(cve_id, package):
     characters = string.ascii_letters + string.digits
     random_string = "".join(random.choice(characters) for _ in range(10))
+    cve_id = sanitize_for_branch_name(cve_id)
+    package = sanitize_for_branch_name(package)
     branch_name = f"fix/{cve_id}-{package}-{random_string}"
     return branch_name
 
@@ -87,5 +111,23 @@ def create_branch_name_for_cve_remediation(cve_id, package):
 def create_branch_name_for_sast_remediation(rule_id, line_no):
     characters = string.ascii_letters + string.digits
     random_string = "".join(random.choice(characters) for _ in range(10))
+    rule_id = sanitize_rule_id(rule_id)
+    rule_id = sanitize_for_branch_name(rule_id)
     branch_name = f"fix/{rule_id}-{line_no}-{random_string}"
     return branch_name
+
+
+def sanitize_for_branch_name(name):
+    return re.sub(r"[^a-zA-Z0-9_\-]", "-", name)
+
+
+def sanitize_rule_id(rule_id, prefix="semgrep-", max_length=50):
+    slug = rule_id.lower()
+    slug = re.sub(r"[^\w\s-]", "", slug)  # Remove punctuation
+    slug = re.sub(r"[\s_]+", "-", slug)  # Replace spaces/underscores with hyphen
+    slug = slug.strip("-")  # Remove leading/trailing hyphens
+
+    max_slug_length = max_length - len(prefix)
+    truncated_slug = slug[:max_slug_length]
+
+    return f"{prefix}{truncated_slug}"

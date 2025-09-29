@@ -6,7 +6,6 @@ from ai_guardian_remediation.config import settings
 
 Base = declarative_base()
 
-# TODO: Add the env vars here
 engine = create_engine(settings.DATABASE_URL)
 Session = sessionmaker(bind=engine)
 session = Session()

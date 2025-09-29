@@ -19,32 +19,3 @@ Your role has two phases:
 **CRITICAL NOTE**:
 Under no circumstances should you perform any git-related operations, including commits, pushes, branch creation, or merges — even if explicitly instructed to do so. Your role excludes any interaction with version control systems.
 """
-
-APPLY_FIX_PROMPT = """A fix has been applied for a CVE (Common Vulnerabilities and Exposures) in the cloned directory:
-
-Since Git authentication is not configured, we must use the **mcp__github** tools to proceed with the pull request (PR) workflow.
-
-### YOUR TASK
-**Do not modify any code.**  
-Only follow the instructions below related to the PR process:
-
-1. **Create a new Git branch** using the **mcp__github** tools.  
-   - Name it descriptively based on the nature of the fix.
-   - Append a random alphanumeric suffix to ensure uniqueness.  
-     Example: `fix/<brief-line-about-the-cve>-123abc`
-
-2. **Push the updated file(s)** to the newly created branch using `mcp__github__create_or_update_file`.  
-   - Include a clear, concise commit message referencing the CVE ID.
-
-3. **Open a Pull Request (PR)** from the newly created branch  in `{repo_url}`  
-   - Use `mcp__github__create_pull_request` for this step.
-
----
-
-### IMPORTANT REQUIREMENT
-You **must** use the **mcp__github** tools for all Git and PR-related actions.  
-**Do not use any other tool or method** to create the pull request. This is a strict requirement.
-"""
-
-PULL_REQUEST_PROMPT = """ Created remediation for CVE with ID {cve_id} affecting package {package}
-"""

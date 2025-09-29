@@ -18,17 +18,15 @@ spec:
     spec:
       containers:
       - name: ai-guardian-remediation
-        image: shraddhazpy/rem-app:v0.0.1
+        image: shraddhazpy/rem-app:v0.0.8
         resources: {}
         envFrom:
         - secretRef:
             name: ai-guardian-remediation-secret
-        securityContext:
-          readOnlyRootFilesystem: true
-          runAsNonRoot: true
-          allowPrivilegeEscalation: false
+        # securityContext:
+          # readOnlyRootFilesystem: true
+          # runAsNonRoot: true
       restartPolicy: Always
       terminationGracePeriodSeconds: 30
-      securityContext:
-        runAsNonRoot: true
-        allowPrivilegeEscalation: false
+      # securityContext:
+      #   runAsNonRoot: true

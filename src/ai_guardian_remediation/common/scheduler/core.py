@@ -4,7 +4,7 @@ import threading
 from datetime import datetime, timedelta
 from concurrent.futures import ThreadPoolExecutor
 
-from ai_guardian_remediation.common.scheduler.task import cleanup_dirs
+from ai_guardian_remediation.common.scheduler.task_cleanup import cleanup_dirs
 
 
 class Task:

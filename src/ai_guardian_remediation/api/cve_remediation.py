@@ -13,8 +13,8 @@ import logging
 
 
 class FixRequest(BaseModel):
-    session_id: Optional[str] = None
     scan_result_id: str
+    session_id: Optional[str] = None
     token: str
     platform: str
     organization: str
@@ -49,7 +49,7 @@ async def fix(
         "Received request to remediate CVE %s in package %s in repo at %s using mode %s",
         input.cve_id,
         input.package,
-        input.remote_url,
+        input.repository,
         input.message_type,
     )
 
@@ -77,10 +77,6 @@ async def fix(
 
         case ModeFix.apply:
             return StreamingResponse(
-                remediation_service.apply_fix(
-                    input.session_id,
-                    input.message_type,
-                    input.user_message,
-                ),
+                remediation_service.apply_fix(),
                 media_type="text/event-stream",
             )
