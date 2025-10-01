@@ -5,6 +5,7 @@ from urllib.parse import urlparse
 import logging
 
 
+# TODO: Refactor to move the provider related stuff outside of this class
 class GitRepoManager:
     def __init__(self, repo_url, clone_path, branch=None, token=None):
         self.repo_url = repo_url
@@ -18,7 +19,10 @@ class GitRepoManager:
             parsed_url = urlparse(self.repo_url)
             netloc = parsed_url.netloc
             path = parsed_url.path.strip("/")
-            return f"https://{self.token}@{netloc}/{path}"
+            if self.token.startswith("ghs_"):
+                return f"https://x-access-token:{self.token}@{netloc}/{path}"
+            else:
+                return f"https://{self.token}@{netloc}/{path}"
         else:
             raise ValueError("No authentication method provided (token required).")
 
@@ -126,12 +130,6 @@ class GitRepoManager:
         origin = repo.remote(name="origin")
         original_url = origin.url
 
-        # Only for Github for now
-        # if original_url.startswith("https://"):
-        #     authed_url = original_url.replace("https://", f"https://{self.token}@")
-        #     origin.set_url(authed_url)
-        # else:
-        #     raise ValueError("Unsupported remote URL. Must be HTTPS.")
         if original_url.startswith("https://"):
             if self.token.startswith("ghs_"):
                 authed_url = original_url.replace(
@@ -150,8 +148,9 @@ class GitRepoManager:
                     logging.error(info.summary)
                     raise RuntimeError(info.summary)
         except Exception as e:
-            logging.error(f"Failed to push changes to branch '{branch}': {e}")
-            raise RuntimeError(f"Push to branch '{branch}' failed : {e}")
+            msg = f"Failed to push changes to branch '{branch}': {e}"
+            logging.error(msg)
+            raise RuntimeError(msg)
 
         origin.set_url(original_url)
         logging.info(f"Pushed changes to new branch {branch}")

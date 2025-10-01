@@ -15,6 +15,7 @@ from claude_code_sdk import (
 from ai_guardian_remediation.core.agents.cve_remediation.claude_code.prompts import (
     SOLUTIONIZE_PROMPT,
 )
+from ai_guardian_remediation.config import settings
 
 
 # Implement the methods here
@@ -53,6 +54,7 @@ class ClaudeCode(CVERemediationAgent):
                 allowed_tools=["Read", "Write", "Bash", "WebSearch", "WebFetch"],
                 permission_mode="acceptEdits",  # auto-accept file edits
                 resume=session,
+                model=settings.CLAUDE_CODE_MODEL,
             )
         ) as client:
             await client.query(message)

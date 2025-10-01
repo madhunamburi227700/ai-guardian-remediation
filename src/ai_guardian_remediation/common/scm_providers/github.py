@@ -31,4 +31,6 @@ class GithubProvider(SCMProvider):
             logging.info("Pull request created")
             return pr.html_url
         except Exception as e:
-            logging.error(f"Could not create pull request: {e}")
+            msg = f"Could not create pull request: {e}"
+            logging.error(msg)
+            raise Exception(msg)
