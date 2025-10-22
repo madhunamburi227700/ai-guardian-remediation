@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Query
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import StreamingResponse
 from typing import Annotated
 
 from ai_guardian_remediation.services.sast_remediation import (
@@ -58,5 +58,4 @@ async def fix_sast_remediation(
                 service.process_approval(), media_type="text/event-stream"
             )
         case ActionEnum.reject:
-            service.cleanup()
-            return JSONResponse({"status": "ok", "message": "Repository cleaned up"})
+            return StreamingResponse(service.cleanup(), media_type="text/event-stream")

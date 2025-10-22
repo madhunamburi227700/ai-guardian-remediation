@@ -17,8 +17,9 @@ b) **Plan and apply a fix**
 - Do not introduce stylistic, speculative, or unrelated changes.
 - Do not introduce any unrelated modifications
 
-**Important**
-Your fix must be driven by the rule message. Strict adherence is required when remediation guidance is provided. Deviation from it may result in incorrect or non-compliant fixes.
+**IMPORTANT**
+- Your fix must be driven by the rule message. Strict adherence is required when remediation guidance is provided. Deviation from it may result in incorrect or non-compliant fixes.
+- DO NOT perform any Git-related operations (such as commits, rebasing, or pushing changes). Any Git operations will disrupt the flow and cause errors or inconsistencies.
 """
 
 

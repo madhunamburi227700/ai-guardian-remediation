@@ -161,6 +161,10 @@ class SASTRemediationService:
             if self.git_manager:
                 self.git_manager.cleanup_repo()
 
-    def cleanup(self):
+    async def cleanup(self):
         if self.git_manager:
             self.git_manager.cleanup_repo()
+            yield format_message(
+                prepare_message("debug", "Cleaned up the cloned repository")
+            )
+        yield format_message(prepare_message("done"))
