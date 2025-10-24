@@ -1,4 +1,6 @@
 FROM python:3.13-slim
+ARG GO_VERSION=1.24.6
+ARG TARGETARCH=amd64
 
 ENV PYTHONUNBUFFERED=1
 
@@ -14,6 +16,9 @@ RUN apt-get update && apt-get install -y \
 && apt-get install -y nodejs \
 && npm install -g @anthropic-ai/claude-code@1.0.90 \
 && rm -rf /var/lib/apt/lists/*
+
+RUN curl -L -s https://go.dev/dl/go${GO_VERSION}.linux-${TARGETARCH}.tar.gz | tar -C /usr/local -xz
+ENV PATH=$PATH:/root/go/bin:/usr/local/go/bin
 
 RUN pip install --no-cache-dir uv
 
