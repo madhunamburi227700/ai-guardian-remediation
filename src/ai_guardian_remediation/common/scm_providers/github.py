@@ -19,14 +19,14 @@ class GithubProvider(SCMProvider):
             path = path[:-4]
         return path.strip("/")
 
-    def create_pull_request(self, base_branch, to_branch, title, body) -> str:
+    def create_pull_request(self, target_branch, source_branch, title, body) -> str:
         try:
             gh_token = Github(self.token)
             owner_repo = GithubProvider.extract_owner_repo(self.repo_url)
             gh_repo = gh_token.get_repo(owner_repo)
 
             pr = gh_repo.create_pull(
-                title=title, body=body, head=to_branch, base=base_branch
+                title=title, body=body, head=source_branch, base=target_branch
             )
             logging.info("Pull request created")
             return pr.html_url

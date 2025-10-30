@@ -8,7 +8,7 @@ Base = declarative_base()
 
 engine = create_engine(settings.DATABASE_URL)
 Session = sessionmaker(bind=engine)
-session = Session()
+# session = Session()
 
 
 async def migrate_tables(engine: Engine = engine):

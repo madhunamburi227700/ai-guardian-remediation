@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
-from typing import Annotated
+from typing import Annotated, Optional
 
 from ai_guardian_remediation.services.sast_remediation import (
     SASTRemediationService,
@@ -16,7 +16,8 @@ class ActionEnum(str, Enum):
 
 
 class SASTFixRequest(BaseModel):
-    scan_result_id: str
+    id: Optional[str] = None
+    vulnerability_id: str
     platform: str
     organization: str
     repository: str
@@ -45,7 +46,8 @@ async def fix_sast_remediation(
         file_path=input.file_path,
         line_no=input.line_no,
         git_token=input.token,
-        scan_result_id=input.scan_result_id,
+        vulnerability_id=input.vulnerability_id,
+        remediation_id=input.id,
     )
 
     match action:

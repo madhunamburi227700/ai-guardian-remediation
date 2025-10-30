@@ -13,7 +13,8 @@ import logging
 
 
 class FixRequest(BaseModel):
-    scan_result_id: str
+    id: Optional[str] = None
+    vulnerability_id: str
     session_id: Optional[str] = None
     token: str
     platform: str
@@ -61,7 +62,8 @@ async def fix(
         organization=input.organization,
         repository=input.repository,
         branch=input.branch,
-        scan_result_id=input.scan_result_id,
+        vulnerability_id=input.vulnerability_id,
+        remediation_id=input.id,
     )
 
     match mode:
