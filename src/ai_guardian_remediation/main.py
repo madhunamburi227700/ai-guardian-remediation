@@ -5,7 +5,7 @@ import logging
 from ai_guardian_remediation.common.scheduler.core import schedule_tasks
 from ai_guardian_remediation.api import cve_remediation, sast_remediation
 from contextlib import asynccontextmanager
-from ai_guardian_remediation.storage.db import db
+# from ai_guardian_remediation.storage.db import db
 
 
 logging.basicConfig(
@@ -16,7 +16,7 @@ logging.basicConfig(
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    await db.migrate_tables()
+    # await db.migrate_tables()
     scheduler = schedule_tasks()
     yield
     scheduler.stop()

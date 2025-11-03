@@ -123,8 +123,6 @@ class SASTRemediationService:
             if diff:
                 yield streamer.emit("diff", diff)
 
-            print(f"-------{Status.FIX_GENERATED if diff else Status.FIX_PENDING}")
-
             await self.db_manager.save_remediation(
                 self.remediation_id,
                 self.vulnerability_id,

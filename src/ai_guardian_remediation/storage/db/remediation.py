@@ -31,9 +31,11 @@ class Remediation(Base):
     pr_link = Column(String)
     prompt_id = Column(String)
     conversation = Column(ARRAY(Text), default=[])
-    created_at = Column(DateTime, default=func.now())
-    updated_at = Column(DateTime, default=func.now(), onupdate=func.now())
-    completed_at = Column(DateTime)
+    created_at = Column(DateTime(timezone=True), default=func.now())
+    updated_at = Column(
+        DateTime(timezone=True), default=func.now(), onupdate=func.now()
+    )
+    completed_at = Column(DateTime(timezone=True))
 
 
 class SQLRemediation:
@@ -59,6 +61,7 @@ class SQLRemediation:
         except Exception as e:
             self.session.rollback()
             logging.error(f"Failed to create remediation: {str(e)}")
+            return None
 
     def update_remediation(
         self, remediation_id: str, update_data: dict
@@ -95,8 +98,8 @@ class SQLRemediation:
         except Exception as e:
             self.session.rollback()
             logging.error(f"Failed to update remediation status: {str(e)}")
+            return None
 
-    # TODO: Fix these
     def get_remediation_by_id(self, remediation_id: str) -> Optional[dict]:
         try:
             remediation = self.session.query(Remediation).get(remediation_id)
@@ -118,6 +121,7 @@ class SQLRemediation:
             }
         except Exception as e:
             logging.error(f"Failed to get remediation: {str(e)}")
+            return None
 
     def get_remediations_by_vulnerability_id(self, vulnerability_id: str) -> list[dict]:
         try:
@@ -147,3 +151,4 @@ class SQLRemediation:
             ]
         except Exception as e:
             logging.error(f"Failed to get remediations: {str(e)}")
+            return []
