@@ -1,7 +1,9 @@
 import os
 import logging
+from typing import Optional
 
 from ai_guardian_remediation.common.db_manager import DatabaseManager
+from ai_guardian_remediation.common.email_manager import EmailManager
 from ai_guardian_remediation.common.event_streamer import EventStreamer
 from ai_guardian_remediation.core.agents.sast_remediation import (
     DEFAULT_CLONE_TMP_DIRECTORY,
@@ -44,6 +46,7 @@ class SASTRemediationService:
         git_token: str,  # token for GitRepoManager
         vulnerability_id: str,
         remediation_id: str = None,
+        user_email: Optional[str] = None,
     ):
         # TODO: Verify that this url is github and is able to get the root url
         # TODO: Some initial checks
@@ -61,6 +64,7 @@ class SASTRemediationService:
         self.vulnerability_id = vulnerability_id
         self.provider = platform.lower()
         self.db_manager = DatabaseManager(Session())
+        self.email_manager = EmailManager(user_email, "SAST")
 
         # Git operations
         self.git_manager = GitRepoManager(
@@ -178,6 +182,15 @@ class SASTRemediationService:
                 self.vulnerability_id,
                 Status.PR_RAISED,
                 {"pr_link": pr_link, "fix_branch": fix_branch},
+            )
+
+            self.email_manager.send_approval_notification(
+                {
+                    "repository": self.git_remote_url,
+                    "branch": fix_branch,
+                    "pr_url": pr_link,
+                    "finding": self.rule,
+                }
             )
         except Exception as e:
             yield streamer.emit("error", str(e))

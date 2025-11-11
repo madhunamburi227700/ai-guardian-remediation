@@ -27,6 +27,7 @@ class SASTFixRequest(BaseModel):
     rule_message: str
     file_path: str
     line_no: int
+    user_email: Optional[str] = None
 
 
 router = APIRouter(prefix="/sast-remediation", tags=["sast-remediation"])
@@ -48,6 +49,7 @@ async def fix_sast_remediation(
         git_token=input.token,
         vulnerability_id=input.vulnerability_id,
         remediation_id=input.id,
+        user_email=input.user_email,
     )
 
     match action:

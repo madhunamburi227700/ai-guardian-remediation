@@ -1,6 +1,8 @@
 import os
+from typing import Optional
 
 from ai_guardian_remediation.common.db_manager import DatabaseManager
+from ai_guardian_remediation.common.email_manager import EmailManager
 from ai_guardian_remediation.common.event_streamer import EventStreamer
 from ai_guardian_remediation.common.scm_providers.base import get_git_provider
 from ai_guardian_remediation.core.agents.cve_remediation import (
@@ -44,6 +46,7 @@ class CVERemediationService:
         branch: str,
         vulnerability_id: str,
         remediation_id: str = None,
+        user_email: Optional[str] = None,
     ):
         # TODO: Change this for other SCMs
         self.git_remote_url = generate_repo_url(platform, organization, repository)
@@ -51,6 +54,7 @@ class CVERemediationService:
         self.package = package
         self.vulnerability_id = vulnerability_id
         self.remediation_id = remediation_id
+        self.email_manager = EmailManager(user_email, "CVE")
 
         # Change this
         self.git_token = git_token
@@ -186,6 +190,15 @@ class CVERemediationService:
                 self.vulnerability_id,
                 Status.PR_RAISED,
                 {"pr_link": pr_link, "fix_branch": fix_branch},
+            )
+
+            self.email_manager.send_approval_notification(
+                {
+                    "repository": self.git_remote_url,
+                    "branch": fix_branch,
+                    "pr_url": pr_link,
+                    "finding": self.cve_id,
+                }
             )
         except Exception as e:
             yield streamer.emit("error", str(e))

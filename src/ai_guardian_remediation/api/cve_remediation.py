@@ -25,6 +25,7 @@ class FixRequest(BaseModel):
     branch: Optional[str] = None
     message_type: Literal["start_generate", "start_apply", "followup"]
     user_message: Optional[str] = None
+    user_email: Optional[str] = None
 
     @field_validator("session_id")
     def empty_string_to_none(cls, v):
@@ -64,6 +65,7 @@ async def fix(
         branch=input.branch,
         vulnerability_id=input.vulnerability_id,
         remediation_id=input.id,
+        user_email=input.user_email,
     )
 
     match mode:
