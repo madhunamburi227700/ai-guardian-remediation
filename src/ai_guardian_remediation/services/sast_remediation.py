@@ -82,6 +82,7 @@ class SASTRemediationService:
             branch=branch,
             file_path=file_path,
             line_number=line_no,
+            rule=rule,
             rule_message=rule_message,
             scm_secret=self.git_token,
         )
@@ -94,31 +95,41 @@ class SASTRemediationService:
             DEFAULT_CLONE_TMP_DIRECTORY, DEFAULT_REMEDIATION_SUB_DIR, clone_dir
         )
 
-    async def generate_fix(self):
+    async def generate_fix(
+        self, session_id: str = None, message_type: str = None, user_message=None
+    ):
         streamer = EventStreamer()
         try:
-            yield streamer.emit(
-                "debug", f"The repo {self.git_remote_url} is about to be cloned"
-            )
-
-            is_cloned = self.git_manager.clone_repo()
-            if not is_cloned:
-                raise Exception(
-                    "The repository could not be cloned, check repository URL or access rights"
+            if message_type == "start_generate":
+                yield streamer.emit(
+                    "debug", f"The repo {self.git_remote_url} is about to be cloned"
                 )
 
-            yield streamer.emit(
-                "debug", f"The repo {self.git_remote_url} has been cloned"
-            )
+                is_cloned = self.git_manager.clone_repo()
+                if not is_cloned:
+                    raise Exception(
+                        "The repository could not be cloned, check repository URL or access rights"
+                    )
 
-            await self.db_manager.save_remediation(
-                self.remediation_id,
-                self.vulnerability_id,
-                Status.STARTED,
-                {"pr_link": "", "fix_branch": "", "conversation": None},
-            )
+                yield streamer.emit(
+                    "debug", f"The repo {self.git_remote_url} has been cloned"
+                )
 
-            async for data in self.agent.generate_fix():
+                await self.db_manager.save_remediation(
+                    self.remediation_id,
+                    self.vulnerability_id,
+                    Status.STARTED,
+                    {"pr_link": "", "fix_branch": "", "conversation": None},
+                )
+
+            if not os.path.exists(self.clone_path):
+                raise Exception(
+                    f"The cloned directory could not be found for repository {self.git_remote_url}"
+                )
+
+            async for data in self.agent.generate_fix(
+                session_id, message_type, user_message
+            ):
                 yield streamer.emit(raw_data=data)
 
             diff: str = self.git_manager.calculate_branch_diff(

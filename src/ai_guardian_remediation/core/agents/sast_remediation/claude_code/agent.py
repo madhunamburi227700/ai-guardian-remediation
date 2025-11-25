@@ -3,7 +3,7 @@ import re
 import logging
 from pathlib import Path
 from claude_code_sdk import (
-    query,
+    ClaudeSDKClient,
     ClaudeCodeOptions,
     AssistantMessage,
     SystemMessage,
@@ -29,6 +29,7 @@ class ClaudeCodeSASTAgent(SASTRemediationAgent):
         branch: str,
         file_path: str,
         line_number: int,
+        rule: str,
         rule_message: str,
         scm_secret: str,
     ):
@@ -37,6 +38,7 @@ class ClaudeCodeSASTAgent(SASTRemediationAgent):
         self.branch = branch
         self.file_path = self._process_file_path(file_path)
         self.line_number = line_number
+        self.rule = rule
         self.rule_message = rule_message
         self.scm_secret = scm_secret
 
@@ -49,28 +51,34 @@ class ClaudeCodeSASTAgent(SASTRemediationAgent):
 
         return file_path
 
-    async def generate_fix(self):
-        prompt = GENERATE_FIX_PROMPT.format(
-            line_number=self.line_number,
-            file_path=self.file_path,
-            rule_message=self.rule_message,
-            repo_url=self.repo_url,
-        )
+    async def generate_fix(
+        self, session_id: str = None, message_type: str = None, user_message: str = None
+    ):
+        message = user_message
+        if message_type == "start_generate":
+            message = GENERATE_FIX_PROMPT.format(
+                line_number=self.line_number,
+                file_path=self.file_path,
+                rule=self.rule,
+                rule_message=self.rule_message
+            )
+        async with ClaudeSDKClient(
+            options=ClaudeCodeOptions(
+                system_prompt=AGENT_SYSTEM_PROMPT,
+                cwd=Path(self.clone_path),
+                allowed_tools=["Read", "Write", "Bash", "WebSearch", "WebFetch"],
+                permission_mode="acceptEdits",  # auto-accept file edits
+                resume=session_id,
+                model=settings.CLAUDE_CODE_MODEL,
+            )
+        ) as client:
+            await client.query(message)
+            async for data in self._receive_response(client=client):
+                yield data
 
-        options = ClaudeCodeOptions(
-            system_prompt=AGENT_SYSTEM_PROMPT,
-            cwd=Path(self.clone_path),
-            allowed_tools=["Read", "Write", "Bash"],
-            permission_mode="acceptEdits",
-            model=settings.CLAUDE_CODE_MODEL,
-        )
-
-        async for data in self._run(prompt=prompt, options=options):
-            yield data
-
-    async def _run(self, prompt: str, options: ClaudeCodeOptions):
+    async def _receive_response(self, client: ClaudeSDKClient):
         message_count = 0
-        async for message in query(prompt=prompt, options=options):
+        async for message in client.receive_response():
             logging.info(f"Received message: {message}\n")
             message_count += 1
 

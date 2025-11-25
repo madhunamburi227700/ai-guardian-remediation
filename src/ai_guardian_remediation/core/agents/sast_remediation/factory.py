@@ -18,6 +18,7 @@ def get_sast_agent(
     branch: str,
     file_path: str,
     line_number: int,
+    rule: str,
     rule_message: str,
     scm_secret: str,
 ):
@@ -28,6 +29,7 @@ def get_sast_agent(
         branch=branch,
         file_path=file_path,
         line_number=line_number,
+        rule=rule,
         rule_message=rule_message,
         scm_secret=scm_secret,
     )

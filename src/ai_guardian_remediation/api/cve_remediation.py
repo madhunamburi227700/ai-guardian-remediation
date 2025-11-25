@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
-from typing import Annotated
+from typing import Annotated, Optional, Literal
 
 from ai_guardian_remediation.services.cve_remediation import (
     CVERemediationService,
@@ -8,7 +8,6 @@ from ai_guardian_remediation.services.cve_remediation import (
 
 from pydantic import BaseModel, field_validator
 from enum import Enum
-from typing import Optional, Literal
 import logging
 
 

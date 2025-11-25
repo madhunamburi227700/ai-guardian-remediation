@@ -1,0 +1,27 @@
+name: Docker Image CI
+
+on:
+  push:
+    tags:
+      - v[0-9]+.[0-9]+.[0-9]+*
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Check out repo
+      uses: actions/checkout@v3
+    - name: Set env
+      run: echo "RELEASE_VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_ENV
+    - name: Login to docker
+      uses: docker/login-action@v2
+      with:
+        registry: ${{ secrets.DOCKER_PUBLIC_HOSTNAME }}
+        username: ${{ secrets.DOCKER_PUBLIC_USERNAME }}
+        password: ${{ secrets.DOCKER_PUBLIC_PASSWORD }}
+    - name: Build the Docker image
+      id: dockerbuild
+      run: |
+       make DOCKER_REPOSITORY=quay.io/opsmxpublic TAG=${{ env.RELEASE_VERSION }} DOCKER_PUSH=true image
+       docker image ls

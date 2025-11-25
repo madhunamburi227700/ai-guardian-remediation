@@ -1,12 +1,13 @@
 from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
-from typing import Annotated, Optional
+from typing import Annotated, Optional, Literal
 
 from ai_guardian_remediation.services.sast_remediation import (
     SASTRemediationService,
 )
-from pydantic import BaseModel
+from pydantic import BaseModel, field_validator
 from enum import Enum
+import logging
 
 
 class ActionEnum(str, Enum):
@@ -18,16 +19,25 @@ class ActionEnum(str, Enum):
 class SASTFixRequest(BaseModel):
     id: Optional[str] = None
     vulnerability_id: str
+    session_id: Optional[str] = None
+    token: str
     platform: str
     organization: str
     repository: str
-    token: str
     branch: str
     rule: str
     rule_message: str
     file_path: str
     line_no: int
+    message_type: Literal["start_generate", "start_apply", "followup"]
+    user_message: Optional[str] = None
     user_email: Optional[str] = None
+
+    @field_validator("session_id")
+    def empty_string_to_none(cls, v):
+        if v == "":
+            return None
+        return v
 
 
 router = APIRouter(prefix="/sast-remediation", tags=["sast-remediation"])
@@ -37,6 +47,12 @@ router = APIRouter(prefix="/sast-remediation", tags=["sast-remediation"])
 async def fix_sast_remediation(
     input: SASTFixRequest, action: Annotated[ActionEnum, Query()]
 ):
+    logging.info(
+        "Received request to remediate a SAST finding %s in repo %s",
+        input.rule,
+        input.repository,
+    )
+
     service = SASTRemediationService(
         platform=input.platform,
         organization=input.organization,
@@ -55,7 +71,12 @@ async def fix_sast_remediation(
     match action:
         case ActionEnum.generate:
             return StreamingResponse(
-                service.generate_fix(), media_type="text/event-stream"
+                service.generate_fix(
+                    session_id=input.session_id,
+                    message_type=input.message_type,
+                    user_message=input.user_message,
+                ),
+                media_type="text/event-stream",
             )
         case ActionEnum.approve:
             return StreamingResponse(
