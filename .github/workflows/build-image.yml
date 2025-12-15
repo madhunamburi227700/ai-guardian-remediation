@@ -5,6 +5,10 @@ on:
     tags:
       - v[0-9]+.[0-9]+.[0-9]+*
 
+env:
+  CONTAINER_REGISTRY: quay.io/opsmxpublic
+  IMAGE: ai-guardian-remediation
+
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -23,5 +27,46 @@ jobs:
     - name: Build the Docker image
       id: dockerbuild
       run: |
-       make DOCKER_REPOSITORY=quay.io/opsmxpublic TAG=${{ env.RELEASE_VERSION }} DOCKER_PUSH=true image
+       make DOCKER_REPOSITORY=${{ env.CONTAINER_REGISTRY }} IMAGE=${{ env.IMAGE }} TAG=${{ env.RELEASE_VERSION }}  DOCKER_PUSH=true image
        docker image ls
+
+    - name: Send SSD Webhook (Build Event)
+      if: startsWith(github.ref, 'refs/tags/')
+      env:
+        SSD_URL: ${{ vars.SSD_WEBHOOK }}
+        SSD_TOKEN: ${{ secrets.SSD_TOKEN }}
+        JOB_NAME: ${{ github.event.repository.name }}
+        BUILD_NUMBER: ${{ github.run_number }}
+        JOB_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        GIT_URL: ${{ github.repositoryUrl }}
+        BRANCH_NAME: ${{ github.ref_name }}
+        IMAGENAME: ${{ env.CONTAINER_REGISTRY }}/${{ env.IMAGE }}:${{ env.RELEASE_VERSION }}
+        APPLICATION_NAME: ai-guardian-release
+      run: |
+        set -e
+
+        echo "Sending build event to SSD..."
+        echo "Job Name: $JOB_NAME"
+        echo "Build Number: $BUILD_NUMBER"
+        echo "Image: $IMAGENAME"
+
+        curl --location "$SSD_URL/webhook/v1/ssd" \
+          --header "Content-Type: application/json" \
+          --header "X-OpsMx-Auth: $SSD_TOKEN" \
+          --data '{
+            "jobname": "'"$JOB_NAME"'",
+            "buildnumber": "'"$BUILD_NUMBER"'",
+            "joburl": "'"$JOB_URL"'",
+            "builduser": "ssdadmin@opsmx.io",
+            "giturl": "'"$GIT_URL"'",
+            "gitbranch": "'"$BRANCH_NAME"'",
+            "account": "dev",
+            "applicationname": "'"$APPLICATION_NAME"'",
+            "deployedby": "ssdadmin@opsmx.io",
+            "namespace": "ai-guardian-release",
+            "artifacts": [
+              { "image": "'"$IMAGENAME"'" }
+            ]
+          }'
+
+        echo "SSD Webhook sent successfully."
