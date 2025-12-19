@@ -1,4 +1,4 @@
-FROM python:3.13-slim
+FROM python:3.13-slim-bookworm
 ARG GO_VERSION=1.24.6
 ARG TARGETARCH=amd64
 
@@ -14,7 +14,7 @@ RUN apt-get update && apt-get install -y \
     procps \
 && curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
 && apt-get install -y nodejs \
-&& npm install -g @anthropic-ai/claude-code@1.0.90 \
+&& npm install -g @anthropic-ai/claude-code@1.0.105 \
 && rm -rf /var/lib/apt/lists/*
 
 RUN curl -L -s https://go.dev/dl/go${GO_VERSION}.linux-${TARGETARCH}.tar.gz | tar -C /usr/local -xz
