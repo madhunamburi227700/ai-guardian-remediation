@@ -1,4 +1,4 @@
-FROM python:3.13-slim-bookworm
+FROM python:3.13-slim
 ARG GO_VERSION=1.24.6
 ARG TARGETARCH=amd64
 
