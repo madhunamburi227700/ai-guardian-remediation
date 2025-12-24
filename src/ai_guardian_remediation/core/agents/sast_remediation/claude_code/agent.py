@@ -60,7 +60,7 @@ class ClaudeCodeSASTAgent(SASTRemediationAgent):
                 line_number=self.line_number,
                 file_path=self.file_path,
                 rule=self.rule,
-                rule_message=self.rule_message
+                rule_message=self.rule_message,
             )
         async with ClaudeSDKClient(
             options=ClaudeCodeOptions(

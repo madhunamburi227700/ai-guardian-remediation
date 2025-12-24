@@ -8,7 +8,7 @@ CLONE_TMP_DIRECTORY = "clone-tmp"
 
 def cleanup_dirs():
     now = datetime.now()
-    cutoff = now - timedelta(hours=5)
+    cutoff = now - timedelta(days=7)
 
     if not os.path.exists(CLONE_TMP_DIRECTORY):
         logging.info(

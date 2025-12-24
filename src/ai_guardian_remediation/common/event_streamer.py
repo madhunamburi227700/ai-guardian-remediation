@@ -19,9 +19,6 @@ class EventStreamer:
 
         return data
 
-    def format_message(self, data: dict) -> str:
-        return f"data: {json.dumps(data)}\n\n"
-
     def emit(
         self, message_type: str = None, text: str = None, raw_data: dict | None = None
     ) -> str:
@@ -31,9 +28,10 @@ class EventStreamer:
         else:
             data = self.prepare_message(message_type, text)
 
-        message = self.format_message(data)
-        self.events.append(message)
-        return message
+        json_event = json.dumps(data, separators=(",", ":"))
+        self.events.append(json_event)
+
+        return f"data: {json_event}\n\n"
 
     def all(self) -> list[str]:
         """Return all emitted (formatted) messages."""

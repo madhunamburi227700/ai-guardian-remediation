@@ -28,32 +28,6 @@ def calculate_sha256_of_string(input_string: str) -> str:
     return sha256_hash.hexdigest()
 
 
-# def prepare_message(message_type: str, text: str = None) -> str:
-#     match message_type:
-#         case "error":
-#             data = {
-#                 "type": message_type,
-#                 "error": text,
-#             }
-#         case "diff":
-#             data = {
-#                 "type": message_type,
-#                 "content": text,
-#             }
-#         case "done":
-#             data = {"type": "done"}
-#         case _:
-#             data = {
-#                 "type": message_type,
-#                 "data": text,
-#             }
-#     return data
-
-
-# def format_message(data) -> str:
-#     return f"data: {json.dumps(data)}\n\n"
-
-
 def sanitize_github_url(url: str) -> str | None:
     """
     Sanitize a GitHub URL.

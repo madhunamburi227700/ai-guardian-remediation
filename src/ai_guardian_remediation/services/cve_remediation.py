@@ -59,10 +59,11 @@ class CVERemediationService:
         # Change this
         self.git_token = git_token
         self.clone_path = self._get_cloned_path(
-            vulnerability_id,
             repository,
             branch,
             cve_id,
+            vulnerability_id,
+            remediation_id,
         )
         self.provider = detect_provider(self.git_remote_url)
         self.db_manager = DatabaseManager(Session())
@@ -82,13 +83,16 @@ class CVERemediationService:
             scm_secret=self.git_token,
         )
 
-    def _get_cloned_path(self, vulnerability_id, repository, branch, cve_id):
+    def _get_cloned_path(
+        self, repository, branch, cve_id, vulnerability_id, remediation_id
+    ):
         clone_dir = get_clone_directory_name(
             self.git_remote_url,
-            vulnerability_id,
             repository,
             branch,
             cve_id,
+            vulnerability_id,
+            remediation_id,
         )
 
         return os.path.join(
@@ -120,6 +124,9 @@ class CVERemediationService:
                     Status.STARTED,
                     {"pr_link": "", "fix_branch": "", "conversation": None},
                 )
+
+            if user_message and message_type == "followup":
+                streamer.emit("user", user_message)
 
             if not os.path.exists(self.clone_path):
                 raise Exception(
@@ -200,12 +207,16 @@ class CVERemediationService:
                     "finding": self.cve_id,
                 }
             )
+
+            if self.git_manager:
+                self.git_manager.cleanup_repo()
+
         except Exception as e:
             yield streamer.emit("error", str(e))
         finally:
             yield streamer.emit("done")
-            if self.git_manager:
-                self.git_manager.cleanup_repo()
+            # if self.git_manager:
+            #     self.git_manager.cleanup_repo()
 
             await self.db_manager.save_remediation(
                 self.remediation_id,

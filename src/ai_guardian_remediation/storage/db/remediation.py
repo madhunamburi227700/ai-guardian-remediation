@@ -5,7 +5,7 @@ import uuid
 import logging
 import enum
 
-from sqlalchemy import Column, String, Text, DateTime, Enum
+from sqlalchemy import Boolean, Column, String, Text, DateTime, Enum, text
 
 from ai_guardian_remediation.storage.db.db import Base
 from sqlalchemy.sql import func
@@ -36,6 +36,7 @@ class Remediation(Base):
         DateTime(timezone=True), default=func.now(), onupdate=func.now()
     )
     completed_at = Column(DateTime(timezone=True))
+    is_active = Column(Boolean, nullable=False, server_default=text("true"))
 
 
 class SQLRemediation:
@@ -53,6 +54,7 @@ class SQLRemediation:
             status=Status.STARTED,
             created_at=datetime.now(timezone.utc),
             updated_at=datetime.now(timezone.utc),
+            is_active=True,
         )
         try:
             self.session.add(remediation)
@@ -118,6 +120,7 @@ class SQLRemediation:
                 "created_at": remediation.created_at,
                 "updated_at": remediation.updated_at,
                 "completed_at": remediation.completed_at,
+                "is_active": remediation.is_active,
             }
         except Exception as e:
             logging.error(f"Failed to get remediation: {str(e)}")
@@ -146,6 +149,7 @@ class SQLRemediation:
                     "created_at": r.created_at,
                     "updated_at": r.updated_at,
                     "completed_at": r.completed_at,
+                    "is_active": r.is_active,
                 }
                 for r in remediations
             ]
