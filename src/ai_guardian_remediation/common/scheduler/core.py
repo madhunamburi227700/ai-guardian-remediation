@@ -66,5 +66,5 @@ class Scheduler:
 
 def schedule_tasks():
     scheduler = Scheduler()
-    scheduler.add_task(Task("Cleanup Repos", cleanup_dirs, 21600))  # every 6 hours
+    scheduler.add_task(Task("Cleanup Repos", cleanup_dirs, 7200))  # every 2 hours
     return scheduler.start()
