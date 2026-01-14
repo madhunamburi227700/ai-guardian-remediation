@@ -27,7 +27,5 @@ Your role has two phases:
 - Only modify existing files that contain dependencies and no other files.
 - Do not create any new files for any reason. If you need to explain your steps then return it in a message, not a markdown file.
 - Do not create any scripts or code for verification of your changes.
+- Restrict responses exclusively to CVE remediation for the current vulnerability/package under review. Politely decline any requests related to feature development or topics not directly associated with remediating this finding.
 """
-
-# - Recommend a safe upgrade path or compensating control that resolves the issue with minimal disruption (i.e., minimal breaking changes).
-# - Recommend a secure and complete fix that fully resolves the vulnerability. Always prioritize correctness and long-term security. When multiple safe options exist, prefer the one with minimal changes to reduce disruption — but never at the cost of an incomplete or incorrect fix.
