@@ -5,6 +5,11 @@ from sqlalchemy.orm import Session
 from ai_guardian_remediation.storage.db.remediation import SQLRemediation, Status
 
 
+class NoOpDatabaseManager:
+    async def save_remediation(self, *args, **kwargs) -> None:
+        pass
+
+
 class DatabaseManager:
     def __init__(self, db_session: Session):
         self.remediation = SQLRemediation(db_session)

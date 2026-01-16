@@ -1,7 +1,10 @@
 import os
 from typing import Optional
 
-from ai_guardian_remediation.common.db_manager import DatabaseManager
+from ai_guardian_remediation.common.db_manager import (
+    DatabaseManager,
+    NoOpDatabaseManager,
+)
 from ai_guardian_remediation.common.email_manager import EmailManager
 from ai_guardian_remediation.common.event_streamer import EventStreamer
 from ai_guardian_remediation.common.scm_providers.base import get_git_provider
@@ -15,7 +18,6 @@ from ai_guardian_remediation.core.agents.cve_remediation.factory import get_cve_
 from ai_guardian_remediation.common.git_manager import GitRepoManager
 
 from ai_guardian_remediation.common.utils import (
-    detect_provider,
     get_clone_directory_name,
     generate_repo_url,
     create_branch_name_for_cve_remediation,
@@ -65,8 +67,10 @@ class CVERemediationService:
             vulnerability_id,
             remediation_id,
         )
-        self.provider = detect_provider(self.git_remote_url)
-        self.db_manager = DatabaseManager(Session())
+        self.provider = platform.lower()
+        self.db_manager = (
+            DatabaseManager(Session()) if settings.DB_ENABLED else NoOpDatabaseManager()
+        )
 
         self.git_manager = GitRepoManager(
             repo_url=self.git_remote_url,

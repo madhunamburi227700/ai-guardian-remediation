@@ -2,7 +2,10 @@ import os
 import logging
 from typing import Optional
 
-from ai_guardian_remediation.common.db_manager import DatabaseManager
+from ai_guardian_remediation.common.db_manager import (
+    DatabaseManager,
+    NoOpDatabaseManager,
+)
 from ai_guardian_remediation.common.email_manager import EmailManager
 from ai_guardian_remediation.common.event_streamer import EventStreamer
 from ai_guardian_remediation.core.agents.sast_remediation import (
@@ -63,7 +66,9 @@ class SASTRemediationService:
         self.remediation_id = remediation_id
         self.vulnerability_id = vulnerability_id
         self.provider = platform.lower()
-        self.db_manager = DatabaseManager(Session())
+        self.db_manager = (
+            DatabaseManager(Session()) if settings.DB_ENABLED else NoOpDatabaseManager()
+        )
         self.email_manager = EmailManager(user_email, "SAST")
 
         # Git operations

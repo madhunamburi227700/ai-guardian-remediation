@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
+from fastapi.exceptions import HTTPException
 from typing import Annotated, Optional, Literal
 
 from ai_guardian_remediation.services.cve_remediation import (
@@ -13,7 +14,7 @@ import logging
 
 class FixRequest(BaseModel):
     id: Optional[str] = None
-    vulnerability_id: str
+    vulnerability_id: Optional[str] = None
     session_id: Optional[str] = None
     token: str
     platform: str
@@ -54,32 +55,36 @@ async def fix(
         input.message_type,
     )
 
-    remediation_service = CVERemediationService(
-        cve_id=input.cve_id,
-        package=input.package,
-        git_token=input.token,
-        platform=input.platform,
-        organization=input.organization,
-        repository=input.repository,
-        branch=input.branch,
-        vulnerability_id=input.vulnerability_id,
-        remediation_id=input.id,
-        user_email=input.user_email,
-    )
+    try:
+        remediation_service = CVERemediationService(
+            cve_id=input.cve_id,
+            package=input.package,
+            git_token=input.token,
+            platform=input.platform,
+            organization=input.organization,
+            repository=input.repository,
+            branch=input.branch,
+            vulnerability_id=input.vulnerability_id,
+            remediation_id=input.id,
+            user_email=input.user_email,
+        )
 
-    match mode:
-        case ModeFix.generate:
-            return StreamingResponse(
-                remediation_service.generate_fix(
-                    input.session_id,
-                    input.message_type,
-                    input.user_message,
-                ),
-                media_type="text/event-stream",
-            )
+        match mode:
+            case ModeFix.generate:
+                return StreamingResponse(
+                    remediation_service.generate_fix(
+                        input.session_id,
+                        input.message_type,
+                        input.user_message,
+                    ),
+                    media_type="text/event-stream",
+                )
 
-        case ModeFix.apply:
-            return StreamingResponse(
-                remediation_service.apply_fix(),
-                media_type="text/event-stream",
-            )
+            case ModeFix.apply:
+                return StreamingResponse(
+                    remediation_service.apply_fix(),
+                    media_type="text/event-stream",
+                )
+
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))

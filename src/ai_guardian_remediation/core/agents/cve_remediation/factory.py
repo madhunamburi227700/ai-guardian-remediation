@@ -2,6 +2,9 @@ _cve_remediators = {"claude_code": "ClaudeCode"}
 
 
 def import_cve_remediator(provider):
+    if provider not in _cve_remediators:
+        raise ValueError(f"Unsupported CVE remediator provider: {provider}")
+
     cve_remediator_class = _cve_remediators[provider]
     module = __import__(
         f"ai_guardian_remediation.core.agents.cve_remediation.{provider}.agent",

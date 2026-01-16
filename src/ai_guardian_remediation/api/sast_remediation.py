@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Query
 from fastapi.responses import StreamingResponse
+from fastapi.exceptions import HTTPException
 from typing import Annotated, Optional, Literal
 
 from ai_guardian_remediation.services.sast_remediation import (
@@ -10,15 +11,15 @@ from enum import Enum
 import logging
 
 
-class ActionEnum(str, Enum):
+class ModeFix(str, Enum):
     generate = "generate"
-    approve = "approve"
-    reject = "reject"
+    apply = "apply"
+    # reject = "reject"
 
 
 class SASTFixRequest(BaseModel):
     id: Optional[str] = None
-    vulnerability_id: str
+    vulnerability_id: Optional[str] = None
     session_id: Optional[str] = None
     token: str
     platform: str
@@ -45,7 +46,7 @@ router = APIRouter(prefix="/sast-remediation", tags=["sast-remediation"])
 
 @router.post("/v1/fix")
 async def fix_sast_remediation(
-    input: SASTFixRequest, action: Annotated[ActionEnum, Query()]
+    input: SASTFixRequest, mode: Annotated[ModeFix, Query()]
 ):
     logging.info(
         "Received request to remediate a SAST finding %s in repo %s",
@@ -53,34 +54,37 @@ async def fix_sast_remediation(
         input.repository,
     )
 
-    service = SASTRemediationService(
-        platform=input.platform,
-        organization=input.organization,
-        repository=input.repository,
-        branch=input.branch,
-        rule=input.rule,
-        rule_message=input.rule_message,
-        file_path=input.file_path,
-        line_no=input.line_no,
-        git_token=input.token,
-        vulnerability_id=input.vulnerability_id,
-        remediation_id=input.id,
-        user_email=input.user_email,
-    )
+    try:
+        service = SASTRemediationService(
+            platform=input.platform,
+            organization=input.organization,
+            repository=input.repository,
+            branch=input.branch,
+            rule=input.rule,
+            rule_message=input.rule_message,
+            file_path=input.file_path,
+            line_no=input.line_no,
+            git_token=input.token,
+            vulnerability_id=input.vulnerability_id,
+            remediation_id=input.id,
+            user_email=input.user_email,
+        )
 
-    match action:
-        case ActionEnum.generate:
-            return StreamingResponse(
-                service.generate_fix(
-                    session_id=input.session_id,
-                    message_type=input.message_type,
-                    user_message=input.user_message,
-                ),
-                media_type="text/event-stream",
-            )
-        case ActionEnum.approve:
-            return StreamingResponse(
-                service.process_approval(), media_type="text/event-stream"
-            )
-        case ActionEnum.reject:
-            return StreamingResponse(service.cleanup(), media_type="text/event-stream")
+        match mode:
+            case ModeFix.generate:
+                return StreamingResponse(
+                    service.generate_fix(
+                        session_id=input.session_id,
+                        message_type=input.message_type,
+                        user_message=input.user_message,
+                    ),
+                    media_type="text/event-stream",
+                )
+            case ModeFix.apply:
+                return StreamingResponse(
+                    service.process_approval(), media_type="text/event-stream"
+                )
+            # case ModeFix.reject:
+            #     return StreamingResponse(service.cleanup(), media_type="text/event-stream")
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
