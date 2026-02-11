@@ -1,0 +1,96 @@
+# ============================
+# STAGE 1: BUILDER
+# ============================
+FROM ubuntu:24.04 AS builder
+
+ARG GO_VERSION=1.24.6
+ARG TARGETARCH=amd64
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1
+
+# ---------------- OS packages (build dependencies) ----------------
+RUN apt-get update && apt-get install -y \
+    software-properties-common \
+    curl \
+    gnupg \
+    ca-certificates \
+    git \
+    gcc \
+    libpq-dev \
+    procps \
+    && add-apt-repository ppa:deadsnakes/ppa \
+    && apt-get update \
+    && apt-get install -y \
+    python3.13 \
+    python3.13-venv \
+    python3.13-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Set Python 3.13 as default
+RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.13 1
+
+# ---------------- Node.js (only builder stage) ----------------
+RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g @anthropic-ai/claude-code@1.0.105 \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---------------- Go (only builder stage) ----------------
+RUN curl -L -s https://go.dev/dl/go${GO_VERSION}.linux-${TARGETARCH}.tar.gz \
+    | tar -C /usr/local -xz
+
+ENV PATH=$PATH:/usr/local/go/bin
+
+# ---------------- Install uv safely ----------------
+RUN curl -LsSf https://astral.sh/uv/install.sh | sh \
+    && mv /root/.local/bin/uv /usr/local/bin/uv
+
+# ---------------- App setup ----------------
+WORKDIR /app
+
+COPY pyproject.toml uv.lock ./
+COPY src/ ./src/
+COPY README.md .
+
+# ---------------- Create virtual environment + install dependencies ----------------
+RUN uv venv /app/.venv \
+    && uv sync --frozen
+
+
+
+# ============================
+# STAGE 2: RUNTIME
+# ============================
+FROM ubuntu:24.04 AS runtime
+
+ENV DEBIAN_FRONTEND=noninteractive \
+    PYTHONUNBUFFERED=1 \
+    PATH="/app/.venv/bin:/usr/local/bin:$PATH"
+
+# ---------------- Runtime packages (Git, Node.js, PostgreSQL libs) ----------------
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    ca-certificates \
+    git \
+    curl \
+    libpq5 \
+    && curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
+    && apt-get install -y nodejs \
+    && npm install -g @anthropic-ai/claude-code@1.0.105 \
+    && rm -rf /var/lib/apt/lists/*
+
+# ---------------- Non-root user ----------------
+RUN groupadd -r appuser && useradd -r -g appuser -m appuser
+
+WORKDIR /app
+
+# ---------------- Copy only final app + venv from builder ----------------
+COPY --from=builder /app /app
+
+RUN chown -R appuser:appuser /app
+USER appuser
+
+EXPOSE 8588
+
+# ---------------- Start application ----------------
+CMD ["uvicorn", "ai_guardian_remediation.main:app", "--host", "0.0.0.0", "--port", "8588"]
