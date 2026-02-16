@@ -30,6 +30,10 @@ RUN apt-get update && apt-get install -y \
 # Set Python 3.13 as default
 RUN update-alternatives --install /usr/bin/python python /usr/bin/python3.13 1
 
+# -------------------- COLLECT GIT LIBRARIES --------------------
+RUN mkdir -p /git-libs \
+    && ldd /usr/bin/git /usr/lib/git-core/git-remote-https | grep "=> /" | awk '{print $3}' | sort -u | xargs -I {} cp -v {} /git-libs/
+
 # ---------------- Node.js (only builder stage) ----------------
 RUN curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
     && apt-get install -y nodejs \
@@ -71,7 +75,6 @@ ENV DEBIAN_FRONTEND=noninteractive \
 # ---------------- Runtime packages (Git, Node.js, PostgreSQL libs) ----------------
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
-    git \
     curl \
     libpq5 \
     && curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
@@ -81,6 +84,23 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # ---------------- Non-root user ----------------
 RUN groupadd -r appuser && useradd -r -g appuser -m appuser
+
+# # -------------------- Git --------------------
+# COPY --from=builder /usr/bin/git /usr/bin/git
+# COPY --from=builder /usr/lib/git-core /usr/lib/git-core
+# COPY --from=builder /usr/share/git-core /usr/share/git-core
+# COPY --from=builder /git-libs/* /usr/lib/x86_64-linux-gnu/
+
+# -------------------- Git --------------------
+COPY --from=builder /usr/bin/git /usr/bin/git
+COPY --from=builder /usr/lib/git-core /usr/lib/git-core
+COPY --from=builder /usr/share/git-core /usr/share/git-core
+COPY --from=builder /git-libs/* /usr/lib/x86_64-linux-gnu/
+
+# Copy dpkg metadata (for vulnerability detection testing)
+COPY --from=builder /var/lib/dpkg /var/lib/dpkg
+COPY --from=builder /var/lib/apt /var/lib/apt
+
 
 WORKDIR /app
 
