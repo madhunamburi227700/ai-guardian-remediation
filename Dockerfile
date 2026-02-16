@@ -8,6 +8,7 @@ RUN apt-get update && apt-get install -y \
     curl \
     gnupg \
     ca-certificates \
+    git \
     gcc \
     libpq-dev \
     procps \
