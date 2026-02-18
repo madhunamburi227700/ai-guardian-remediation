@@ -61,8 +61,6 @@ COPY README.md .
 RUN uv venv /app/.venv \
     && uv sync --frozen
 
-
-
 # ============================
 # STAGE 2: RUNTIME
 # ============================
@@ -76,6 +74,7 @@ ENV DEBIAN_FRONTEND=noninteractive \
 RUN apt-get update && apt-get install -y --no-install-recommends \
     ca-certificates \
     curl \
+    git \
     libpq5 \
     && curl -fsSL https://deb.nodesource.com/setup_lts.x | bash - \
     && apt-get install -y nodejs \
@@ -84,22 +83,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 
 # ---------------- Non-root user ----------------
 RUN groupadd -r appuser && useradd -r -g appuser -m appuser
-
-# # -------------------- Git --------------------
-# COPY --from=builder /usr/bin/git /usr/bin/git
-# COPY --from=builder /usr/lib/git-core /usr/lib/git-core
-# COPY --from=builder /usr/share/git-core /usr/share/git-core
-# COPY --from=builder /git-libs/* /usr/lib/x86_64-linux-gnu/
-
-# -------------------- Git --------------------
-COPY --from=builder /usr/bin/git /usr/bin/git
-COPY --from=builder /usr/lib/git-core /usr/lib/git-core
-COPY --from=builder /usr/share/git-core /usr/share/git-core
-COPY --from=builder /git-libs/* /usr/lib/x86_64-linux-gnu/
-
-# Copy dpkg metadata (for vulnerability detection testing)
-COPY --from=builder /var/lib/dpkg /var/lib/dpkg
-COPY --from=builder /var/lib/apt /var/lib/apt
 
 
 WORKDIR /app
